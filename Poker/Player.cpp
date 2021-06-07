@@ -14,6 +14,7 @@ public:
      */
     Player(const char * s, const char * p, const char * n): socket(s, p) {
         nicks[0] = n;
+        resetState();
     };
 
     /**
@@ -43,9 +44,36 @@ public:
         while (true)
         {
             // Leer stdin con std::getline
-            std::string msg;
-            std::getline(std::cin, msg);
-            Message em(nicks[0], msg);
+            std::string inp;
+            std::getline(std::cin, inp);
+            size_t space_pos = inp.find(" ");
+            std::string inst; 
+            if (space_pos != std::string::npos) {
+                inst = inp.substr(0, space_pos);
+                inp = inp.substr(space_pos + 1);
+            }
+
+            Message em = Message();
+            em.nick = nicks[0];
+            if (inst == "LOGOUT") em.type = Message::LOGOUT;
+            else if (inst == "PASS") em.type = Message::PASS;
+            /*else if (inst == "BET") {
+                em.type = Message::BET;
+                em.message1 = std::atoi(inp);
+            }*/
+            else if (inst == "DISCARD") {
+                em.type = Message::DISCARD;
+                space_pos = s.find(" ");
+                if (space_pos == std::string::npos) {
+                    em.message1 = std::atoi(inp);
+                }
+                else {
+                    em.message1 = std::atoi(s.substr(0, space_pos));
+                    inp = inp.substr(space_pos + 1);
+                    em.message2 = std::atoi(inp);
+                }
+            }
+            else continue;
 
             // Enviar al servidor usando socket
             socket.send(em, socket);
@@ -62,6 +90,29 @@ public:
         {
             Message msg;
             socket.recv(msg);
+
+            switch (msg.type)
+            {
+            case Message::LOGIN_INFO:
+                /* code */
+                break;
+            case Message::DISCARD_INFO:
+                int pos = searchNick(msg.nick);
+                if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
+                for (int i = 0; i < msg.message1; i++) discarded[pos][i] = true;
+                break;
+            case Message::CARDS:
+                if (msg.nick == nicks[0]) continue;
+                int pos = searchNick(msg.nick);
+                if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
+                for (int i = 0; i < msg.message1; i++) hands[pos][i] = true;
+                break;
+            case Message::PASS:
+                int pos = searchNick(msg.nick);
+                if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
+                for (int i = 0; i < 2; i++) hand[pos][i] = -1;
+                break;
+            }
         }
     }
 
@@ -74,9 +125,32 @@ private:
     Socket socket;
 
     /**
-     * Nick del usuario
+     * Nicks de los jugadores
      */
-
     std::string nicks[NUM_PLAYERS];
-    int hands[4];
+
+    /**
+     * Manos de los jugadores
+     */
+    int hands[NUM_PLAYERS][2]; // 0 significa que no se conoce la carta, -1 que se ha retirado
+
+    /**
+     * Descartes de los jugadores
+     */
+    bool discarded[NUM_PLAYERS][2];
+
+    int searchNick(std::string nc) {
+        for (int i = 0; i < NUM_PLAYERS; ++i) {
+            if (nicks[i] == nc) return i;
+        }
+        return -1;
+    }
+
+    void resetState() {
+        for (int i = 0; i < NUM_PLAYERS; i++)
+            for (int j = 0; j < 2; j++) {
+                hands[i][j] = 0;
+                discarded[i][j] = false;
+            }
+    }
 };

@@ -12,11 +12,15 @@ public:
 
     enum MessageType
     {
-        LOGIN,
-        PASS,
-        BET,
-        DISCARD,
-        LOGOUT
+        LOGIN, //Se conecta un jugador
+        PASS, //Se pasa la ronda
+        BET, //Se apuesta una cantidad
+        DISCARD, //Se descarta 0, 1 o 2 cartas
+        LOGOUT, //Se desconecta un jugador
+        CARDS, //Que cartas tiene un jugador
+
+        LOGIN_INFO, //La información que se le da a un jugador cuando se une
+        DISCARD_INFO //Cuantas cartas ha descartado un jugador
     };
 
     Message(){};
