@@ -1,3 +1,4 @@
+#include <thread>
 #include "Serializable.h"
 #include "Socket.h"
 #include "Message.cpp"
@@ -43,7 +44,6 @@ public:
     {    
         while (true)
         {
-            // Leer stdin con std::getline
             std::string inp;
             std::getline(std::cin, inp);
             size_t space_pos = inp.find(" ");
@@ -57,20 +57,17 @@ public:
             em.nick = nicks[0];
             if (inst == "LOGOUT") em.type = Message::LOGOUT;
             else if (inst == "PASS") em.type = Message::PASS;
-            /*else if (inst == "BET") {
-                em.type = Message::BET;
-                em.message1 = std::atoi(inp);
-            }*/
+            else if (inst == "BET") em.type = Message::BET;
             else if (inst == "DISCARD") {
                 em.type = Message::DISCARD;
-                space_pos = s.find(" ");
+                space_pos = inp.find(" ");
                 if (space_pos == std::string::npos) {
-                    em.message1 = std::atoi(inp);
+                    em.message1 = std::stoi(inp);
                 }
                 else {
-                    em.message1 = std::atoi(s.substr(0, space_pos));
+                    em.message1 = std::stoi(inp.substr(0, space_pos));
                     inp = inp.substr(space_pos + 1);
-                    em.message2 = std::atoi(inp);
+                    em.message2 = std::stoi(inp);
                 }
             }
             else continue;
@@ -94,7 +91,9 @@ public:
             switch (msg.type)
             {
             case Message::LOGIN_INFO:
-                /* code */
+                if (msg.nick == nicks[0]) continue;
+                nicks[usedNicks] = msg.nick; //Se entiende que el servidor no permite que se conecten mas de NUM_PLAYERS jugadores
+                usedNicks++;
                 break;
             case Message::DISCARD_INFO:
                 int pos = searchNick(msg.nick);
@@ -102,15 +101,23 @@ public:
                 for (int i = 0; i < msg.message1; i++) discarded[pos][i] = true;
                 break;
             case Message::CARDS:
-                if (msg.nick == nicks[0]) continue;
                 int pos = searchNick(msg.nick);
                 if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
                 for (int i = 0; i < msg.message1; i++) hands[pos][i] = true;
                 break;
+            case Message::CARD_TABLE:
+                cardsTable.push_back(msg.message1);
+                break;
             case Message::PASS:
                 int pos = searchNick(msg.nick);
                 if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
-                for (int i = 0; i < 2; i++) hand[pos][i] = -1;
+                for (int i = 0; i < 2; i++) hands[pos][i] = -1;
+                break;
+            case Message::END_ROUND:
+                resetState();
+                break;
+            case Message::LOGOUT:
+                resetGame();
                 break;
             }
         }
@@ -127,6 +134,7 @@ private:
     /**
      * Nicks de los jugadores
      */
+    int usedNicks = 1;
     std::string nicks[NUM_PLAYERS];
 
     /**
@@ -139,11 +147,21 @@ private:
      */
     bool discarded[NUM_PLAYERS][2];
 
+    /**
+     * Cartas en la mesa
+     */
+    std::vector<int> cardsTable;
+
     int searchNick(std::string nc) {
         for (int i = 0; i < NUM_PLAYERS; ++i) {
             if (nicks[i] == nc) return i;
         }
         return -1;
+    }
+
+    void resetGame() {
+        resetState();
+        usedNicks = 1;
     }
 
     void resetState() {
@@ -152,5 +170,17 @@ private:
                 hands[i][j] = 0;
                 discarded[i][j] = false;
             }
+        cardsTable.clear();
     }
 };
+
+int main(int argc, char **argv)
+{
+    Player ec(argv[1], argv[2], argv[3]);
+
+    std::thread net_thread([&ec](){ ec.net_thread(); });
+
+    ec.login();
+
+    ec.input_thread();
+}

@@ -18,14 +18,15 @@ public:
         DISCARD, //Se descarta 0, 1 o 2 cartas
         LOGOUT, //Se desconecta un jugador
         CARDS, //Que cartas tiene un jugador
-
+        CARD_TABLE, //Nueva carta sobre la mesa
         LOGIN_INFO, //La información que se le da a un jugador cuando se une
-        DISCARD_INFO //Cuantas cartas ha descartado un jugador
+        DISCARD_INFO, //Cuantas cartas ha descartado un jugador
+        END_ROUND //Se resetea el estado del juego
     };
 
     Message(){};
 
-    Message(const std::string& n, const uint8_t& t, const uint16_t& m1 = 0, const uint8_t& m2 = 0) : nick(n), type(t), message1(m1), message2(m2) {};
+    Message(const std::string& n, const uint8_t& t, const uint16_t& m1 = -1, const uint8_t& m2 = -1) : nick(n), type(t), message1(m1), message2(m2) {};
 
     void to_bin()
     {
