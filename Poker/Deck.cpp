@@ -41,4 +41,15 @@ public:
         deck.pop_back();
         return top;
     }
+
+    static bool SameSuit(card a, card b)
+    {
+        return (a / NUM_CARDS_RANK == b / NUM_CARDS_RANK );
+    }
+
+    static int HighestCard(card a, card b)
+    {
+        if(a % NUM_CARDS_RANK >= b % NUM_CARDS_RANK) return a;
+        else return b;
+    }
 };

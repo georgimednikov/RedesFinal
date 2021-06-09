@@ -3,7 +3,19 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"label": "Compilar",
+			"label": "Compilar Player",
+			"command": "g++ -o ${fileBasenameNoExtension}.exe ${relativeFile} -lSDL2main -lSDL2 -lpthread",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"type": "shell",
+			"label": "Compilar Server",
 			"command": "g++ -o ${fileBasenameNoExtension}.exe ${relativeFile} -lSDL2main -lSDL2",
 			"options": {
 				"cwd": "${workspaceFolder}"

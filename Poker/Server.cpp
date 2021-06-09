@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <memory>
+#include <algorithm>
 
 #include "Deck.cpp"
 #include "Socket.h"
@@ -45,6 +46,8 @@ public:
     }
 
 private:
+    enum Hands {High_Card, Pair, Two_Pair, Three_of_a_kind, Straight, Flush, Full_House, Four_of_a_kind, Straight_Flush, Royal_Flush};
+
     Deck* deck;
 
     /**
@@ -117,7 +120,6 @@ private:
         sendPlayers(m);
 
         //Se mira cuantas cartas cada jugador quiere descartar
-        Socket* s;
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, s);
@@ -149,7 +151,10 @@ private:
         }
 
         //Se comprueba quien gana
-        checkWinner();
+        int winner = checkWinner();
+        if (winner >= 0) m = Message(clients[winner].second, Message::WINNER);
+        else m = Message("Server", Message::WINNER);
+        sendPlayers(m);
 
         //Se resetea el juego
         m = Message("Server", Message::END_ROUND);
@@ -182,11 +187,106 @@ private:
         return true;
     }
 
-    void checkWinner() {
-        
-    }
-};
+    int checkWinner() 
+    {
+        int winner = 0; 
+        int highest_card[NUM_PLAYERS];
+        Hands highest_hand[NUM_PLAYERS];
+        bool found = false;
+        for (int i = 0; i < NUM_PLAYERS; i++)
+        {
+            std::vector<int> playerHand;
+            for(int j = 0; j < 5; j++) {
+                if(j < 2) playerHand.push_back(hands[i][j]); 
+                else playerHand.push_back(cardsTable[j - 2]);
+            }
+            std::sort(playerHand.begin(), playerHand.end(), Deck::HighestCard);
 
+            checkFlush(playerHand, highest_hand[i], highest_card[i]);
+            checkPairs(playerHand, highest_hand[i], highest_card[i]);
+        }
+
+        for (size_t i = 1; i < NUM_PLAYERS; i++)
+        {
+            if(highest_hand[i] > highest_hand[winner])
+                winner = i;
+            else if(highest_hand[i] == highest_hand[winner] && highest_card[i] > highest_card[winner])
+                winner = i;
+            else if(highest_card[i] == highest_card[winner])
+            {
+                int better = -1;
+                int maxI = Deck::HighestCard(hands[i][0], hands[i][1]), maxWin = Deck::HighestCard(hands[winner][0], hands[winner][1]);
+                if( maxI > maxWin)
+                    winner = i;
+                else if (maxI == maxWin)
+                {
+                    maxI = (maxI == hands[i][0]) ? hands[i][1]: hands[i][0];
+                    maxWin = (maxWin == hands[winner][0]) ? hands[winner][1]: hands[winner][0];
+                    if( maxI > maxWin) 
+                        winner = i;
+                    else if (maxI == maxWin)
+                    winner = -1;
+                }
+            }
+        }
+
+        return winner;
+    }
+
+    void checkFlush(std::vector<int> playerHand, Hands hand, int card)
+    {
+        bool flush = true, straight = true;
+        for (int i = 1; i < playerHand.size() && (flush || straight); i++)
+        {
+            flush = Deck::SameSuit(playerHand[i - 1], playerHand[i]);
+            straight = (playerHand[i - 1] % NUM_CARDS_RANK == playerHand[i] % NUM_CARDS_RANK + 1);
+        }
+
+        if (flush && straight && (playerHand[playerHand.size() - 1] % NUM_CARDS_RANK == NUM_CARDS_RANK - 1)) hand = Hands::Royal_Flush;
+        else if (flush && straight) hand = Hands::Straight_Flush;
+        else if (flush) hand = Hands::Flush;
+        else if (straight) hand = Hands::Straight;
+        else hand = Hands::High_Card;
+        card = playerHand[playerHand.size() - 1] % NUM_CARDS_RANK ;
+    }
+
+    void checkPairs(std::vector<int> playerHand, Hands hand, int card)
+    {
+        if (hand > Hands::Full_House) return;
+        int cont = 1;
+        bool pair = false,  double_pair = false, threesome = false, foursome = false;
+        for (int i = 1; i < playerHand.size(); i++)
+        {
+            if (playerHand[i - 1] % NUM_CARDS_RANK == playerHand[i] % NUM_CARDS_RANK)
+                cont++;
+            else {
+                switch (cont)
+                {
+                case 2:
+                    if(!pair) pair = true;
+                    else double_pair = true;
+                    break;
+                case 3:
+                    threesome = true;
+                    break;
+                case 4:
+                    foursome = true;
+                    hand = Hands::Four_of_a_kind;
+                    card = playerHand[i - 1] % NUM_CARDS_RANK;
+                    return;
+                }
+                card = playerHand[i - 1] % NUM_CARDS_RANK;
+                cont = 1;
+            }
+        }
+
+        if(pair && threesome) hand = Hands::Full_House;
+        else if (threesome) hand = Hands::Three_of_a_kind;
+        else if (double_pair) hand = Hands::Two_Pair;
+        else if (pair) hand = Hands::Pair;
+    }
+
+};
 
 int main(int arg, char *argv[])
 {

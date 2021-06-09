@@ -21,7 +21,8 @@ public:
         CARD_TABLE, //Nueva carta sobre la mesa
         LOGIN_INFO, //La información que se le da a un jugador cuando se une
         DISCARD_INFO, //Cuantas cartas ha descartado un jugador
-        END_ROUND //Se resetea el estado del juego
+        END_ROUND, //Se resetea el estado del juego
+        WINNER //Quien ha ganado la ronda
     };
 
     Message(){};
@@ -39,7 +40,7 @@ public:
         memcpy(tmp, nick.c_str(), 8);
         tmp += 8;
 
-        memcpy(tmp, '\0', sizeof(char));
+        memcpy(tmp, "\0", sizeof(char));
         tmp++;
 
         memcpy(tmp, &type, sizeof(uint8_t));

@@ -90,41 +90,72 @@ public:
 
             switch (msg.type)
             {
-            case Message::LOGIN_INFO:
-                if (msg.nick == nicks[0]) continue;
-                nicks[usedNicks] = msg.nick; //Se entiende que el servidor no permite que se conecten mas de NUM_PLAYERS jugadores
-                usedNicks++;
-                break;
-            case Message::DISCARD_INFO:
-                int pos = searchNick(msg.nick);
-                if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
-                for (int i = 0; i < msg.message1; i++) discarded[pos][i] = true;
-                break;
-            case Message::CARDS:
-                int pos = searchNick(msg.nick);
-                if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
-                for (int i = 0; i < msg.message1; i++) hands[pos][i] = true;
-                break;
-            case Message::CARD_TABLE:
-                cardsTable.push_back(msg.message1);
-                break;
-            case Message::PASS:
-                int pos = searchNick(msg.nick);
-                if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
-                for (int i = 0; i < 2; i++) hands[pos][i] = -1;
-                break;
-            case Message::END_ROUND:
-                resetState();
-                break;
-            case Message::LOGOUT:
-                resetGame();
-                break;
+                case Message::LOGIN_INFO:
+                {
+                    if (msg.nick == nicks[0]) continue;
+                    nicks[usedNicks] = msg.nick; //Se entiende que el servidor no permite que se conecten mas de NUM_PLAYERS jugadores
+                    usedNicks++;
+                    break;
+                }
+                case Message::DISCARD_INFO:
+                {                
+                    int pos = searchNick(msg.nick);
+                    if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
+                    for (int i = 0; i < msg.message1; i++) discarded[pos][i] = true;
+                    break;
+                }
+                case Message::CARDS:
+                {
+                    int pos = searchNick(msg.nick);
+                    if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
+                    for (int i = 0; i < msg.message1; i++) hands[pos][i] = true;
+                    break;
+                }
+                case Message::CARD_TABLE:
+                {    cardsTable.push_back(msg.message1);
+                    break;
+                }
+                case Message::PASS:
+                {                
+                    int pos = searchNick(msg.nick);
+                    if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
+                    for (int i = 0; i < 2; i++) hands[pos][i] = -1;
+                    break;
+                }
+                case Message::END_ROUND:
+                {    
+                    resetState();
+                    break;
+                }
+                case Message::LOGOUT:
+                {
+                    resetGame();
+                    break;
+                }
+                case Message::WINNER:
+                {
+                    if (msg.nick == "Server") state = DRAW;
+                    if (msg.nick == nicks[0]) state = WIN;
+                    else state = LOSE;
+                }
             }
         }
     }
 
 
 private:
+
+    enum State {
+        PLAYING,
+        LOSE,
+        WIN,
+        DRAW
+    };
+
+    /**
+     * Estado del juego
+     */
+    State state;
 
     /**
      * Socket para comunicar con el servidor
@@ -171,6 +202,7 @@ private:
                 discarded[i][j] = false;
             }
         cardsTable.clear();
+        state = PLAYING;
     }
 };
 
