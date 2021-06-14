@@ -63,7 +63,7 @@ public:
      *    @param address cadena que representa la dirección o nombre
      *    @param port cadena que representa el puerto o nombre del servicio
      */
-    Socket(const char * address, const char * port)
+    Socket(const char * address, const char * port, bool passive)
     {
         //Construir un socket de tipo AF_INET y SOCK_DGRAM usando getaddrinfo.
         //Con el resultado inicializar los miembros sd, sa y sa_len de la clase
@@ -72,7 +72,7 @@ public:
         struct addrinfo * res;
 
         memset((void *) & hints, 0, sizeof(struct addrinfo));
-
+        //if(passive) hints.ai_flags = AI_PASSIVE;
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_DGRAM;
 

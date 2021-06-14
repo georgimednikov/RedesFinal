@@ -16,7 +16,7 @@ const int NUM_PLAYERS = 4;
 class PokerServer
 {
 public:
-    PokerServer(const char * s, const char * p): socket(s, p)
+    PokerServer(const char * s, const char * p): socket(s, p, true)
     {
         socket.bind();
     };
@@ -26,14 +26,17 @@ public:
      *  lo distribuye a los clientes. Mantiene actualizada la lista de clientes
      */
     void do_messages() {
+        Message msg;
+        Socket* s;
         while (true) {
-            Message msg;
-            Socket* s;
+            std::cout << clients.size() << std::endl;
             socket.recv(msg, s);
             s->bind();
 
+            std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
             checkLogin(msg, s);
             checkLogout(msg, s);
+
 
             if (clients.size() < NUM_PLAYERS) continue;
             while (clients.size() == NUM_PLAYERS) {
@@ -41,7 +44,6 @@ public:
             }
             Message m = Message("Server", Message::LOGOUT);
             sendPlayers(m);
-            
         }
     }
 
@@ -96,9 +98,9 @@ private:
                 if (checkLogout(m, s)) return;
             }
             while (s != clients[i].first.get() && m.type != Message::DISCARD);
-            int count = 0; if (m.message1 != -1) {
+            int count = 0; if (m.message1 != 0) {
                 count++;
-                if (m.message2 != -1) count++;
+                if (m.message2 != 0) count++;
             }
             m.type = Message::DISCARD_INFO; m.message1 = count;
             sendPlayers(m);
@@ -162,28 +164,29 @@ private:
         cardsTable.clear();
     }
 
-    void sendPlayers(Message m) {
+    void sendPlayers(Message& m) {
         for (int j = 0; j < NUM_PLAYERS; j++) {
             socket.send(m, *clients[j].first.get());
         }
     }
 
-    bool checkLogin(Message m, Socket* s) {
+    bool checkLogin(Message& m, Socket* s) {
         if (m.type != Message::LOGIN) return false;
-        std::cout << "Conectado: " << m.nick << std::endl;
         clients.push_back(std::pair<std::unique_ptr<Socket>, std::string>(std::move(std::make_unique<Socket>(*s)), m.nick));
+        std::cout << "Conectado: " << m.nick << std::endl;
         return true;
     }
 
-    bool checkLogout(Message m, Socket* s) {
+    bool checkLogout(Message& m, Socket* s) {
         if (m.type != Message::LOGOUT) return false;
         auto it = clients.begin();
-        while (it != clients.end() && it->first.get() != s) it++;
+        while (it != clients.end() && !(*(it->first.get()) == *s)) it++;
         if(it != clients.end()) {
             std::cout << "Desconectado a: " << m.nick << std::endl;
             clients.erase(it);
             it->first.release();
         }
+        else std::cout << "No encuentra" << std::endl;
         return true;
     }
 

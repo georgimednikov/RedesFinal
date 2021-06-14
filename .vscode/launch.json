@@ -9,7 +9,26 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/Server.exe",
-            "args": [],
+            "args": ["0.0.0.0", "3000"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Habilitar la impresión con sangría para gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Player",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Player.exe",
+            "args": ["Test", "127.0.0.1", "3000"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

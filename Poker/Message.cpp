@@ -8,7 +8,7 @@
 class Message: public Serializable
 {
 public:
-    static const size_t MESSAGE_SIZE = 9 * sizeof(char) + 2 * sizeof(uint8_t) + sizeof(uint16_t);
+    static const size_t MESSAGE_SIZE = 9 * sizeof(char) + 3 * sizeof(uint8_t);
 
     enum MessageType
     {
@@ -25,9 +25,9 @@ public:
         WINNER //Quien ha ganado la ronda
     };
 
-    Message(){};
+    Message() : nick(""), type(0), message1(0), message2(0) {};
 
-    Message(const std::string& n, const uint8_t& t, const uint16_t& m1 = -1, const uint8_t& m2 = -1) : nick(n), type(t), message1(m1), message2(m2) {};
+    Message(const std::string& n, const uint8_t& t, const uint8_t& m1 = 0, const uint8_t& m2 = 0) : nick(n), type(t), message1(m1), message2(m2) {};
 
     void to_bin()
     {
@@ -37,17 +37,17 @@ public:
 
         char* tmp = _data;
 
-        memcpy(tmp, nick.c_str(), 8);
-        tmp += 8;
+        memcpy(tmp, nick.c_str(), 9);
+        tmp += 9;
 
-        memcpy(tmp, "\0", sizeof(char));
-        tmp++;
+        /*memcpy(tmp, "\0", sizeof(char));
+        tmp++;*/
 
         memcpy(tmp, &type, sizeof(uint8_t));
         tmp += sizeof(uint8_t);
             
-        memcpy(tmp, &message1, sizeof(uint16_t));
-        tmp += sizeof(uint16_t);
+        memcpy(tmp, &message1, sizeof(uint8_t));
+        tmp += sizeof(uint8_t);
 
         memcpy(tmp, &message2, sizeof(uint8_t));
     }
@@ -66,8 +66,8 @@ public:
         memcpy(&type, tmp, sizeof(uint8_t));
         tmp += sizeof(uint8_t);
             
-        memcpy(&message1, tmp, sizeof(uint16_t));
-        tmp += sizeof(uint16_t);
+        memcpy(&message1, tmp, sizeof(uint8_t));
+        tmp += sizeof(uint8_t);
 
         memcpy(&message2, tmp, sizeof(uint8_t));
 
@@ -76,6 +76,6 @@ public:
 
     std::string nick;
     uint8_t type;
-    uint16_t message1;
+    uint8_t message1;
     uint8_t message2;
 };

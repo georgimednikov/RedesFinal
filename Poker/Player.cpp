@@ -2,6 +2,7 @@
 #include "Serializable.h"
 #include "Socket.h"
 #include "Message.cpp"
+#include "Texture.h"
 
 const int NUM_PLAYERS = 4;
 
@@ -13,9 +14,9 @@ public:
      * @param p puerto del servidor
      * @param n nick del usuario
      */
-    Player(const char * s, const char * p, const char * n): socket(s, p) {
+    Player(const char * s, const char * p, char * n): socket(s, p, false) {
         nicks[0] = n;
-        resetState();
+        resetGame();
     };
 
     /**
@@ -52,6 +53,7 @@ public:
                 inst = inp.substr(0, space_pos);
                 inp = inp.substr(space_pos + 1);
             }
+            else inst = inp;
 
             Message em = Message();
             em.nick = nicks[0];
@@ -61,7 +63,8 @@ public:
             else if (inst == "DISCARD") {
                 em.type = Message::DISCARD;
                 space_pos = inp.find(" ");
-                if (space_pos == std::string::npos) {
+                if (inst == inp);
+                else if (space_pos == std::string::npos) {
                     em.message1 = std::stoi(inp);
                 }
                 else {
@@ -71,7 +74,7 @@ public:
                 }
             }
             else continue;
-
+  
             // Enviar al servidor usando socket
             socket.send(em, socket);
         }
@@ -83,10 +86,13 @@ public:
      */
     void net_thread()
     {
+        //initRender();
         while(true)
         {
+            //render();
             Message msg;
             socket.recv(msg);
+            std::cout << "Recibe" << std::endl;
 
             switch (msg.type)
             {
@@ -139,6 +145,7 @@ public:
                     else state = LOSE;
                 }
             }
+            std::cout << "Procesa" << std::endl;
         }
     }
 
@@ -204,15 +211,30 @@ private:
         cardsTable.clear();
         state = PLAYING;
     }
+
+    void initRender() {
+        int winX, winY; // PosiciOn de la ventana
+        winX = winY = SDL_WINDOWPOS_CENTERED;
+        // InicializaciOn del sistema, ventana y renderer
+        SDL_Init(SDL_INIT_EVERYTHING);
+        window = SDL_CreateWindow("Poker De-lux", winX, winY, 800, 600, SDL_WINDOW_SHOWN);
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    }
+
+    void render() {
+        SDL_SetRenderDrawColor(renderer, 48, 132, 70, 255);
+        SDL_RenderClear(renderer); //Clear
+        SDL_RenderPresent(renderer); //Draw
+    }
+
+    SDL_Window* window;
+    SDL_Renderer* renderer;
 };
 
 int main(int argc, char **argv)
 {
     Player ec(argv[1], argv[2], argv[3]);
-
     std::thread net_thread([&ec](){ ec.net_thread(); });
-
     ec.login();
-
     ec.input_thread();
 }
