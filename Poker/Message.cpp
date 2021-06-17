@@ -38,10 +38,10 @@ public:
         char* tmp = _data;
 
         memcpy(tmp, nick.c_str(), 9);
-        tmp += 9;
+        tmp += 8;
 
-        /*memcpy(tmp, "\0", sizeof(char));
-        tmp++;*/
+        memcpy(tmp, "\0", sizeof(char));
+        tmp++;
 
         memcpy(tmp, &type, sizeof(uint8_t));
         tmp += sizeof(uint8_t);
@@ -54,11 +54,7 @@ public:
 
     int from_bin(char * bobj)
     {
-        alloc_data(MESSAGE_SIZE);
-
-        memcpy(static_cast<void *>(_data), bobj, MESSAGE_SIZE);
-
-        char* tmp = _data;
+        char* tmp = bobj;
 
         nick = tmp;
         tmp += 9;

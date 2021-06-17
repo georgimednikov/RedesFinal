@@ -16,9 +16,10 @@ const int NUM_PLAYERS = 4;
 class PokerServer
 {
 public:
-    PokerServer(const char * s, const char * p): socket(s, p, true)
+    PokerServer(const char * s, const char * p): socket(s, p, true, Socket s)
     {
         socket.bind();
+        socket.listen();
     };
 
     /**
@@ -30,13 +31,13 @@ public:
         Socket* s;
         while (true) {
             std::cout << clients.size() << std::endl;
+            
+            s = socket.accept();
             socket.recv(msg, s);
-            s->bind();
 
             std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
             checkLogin(msg, s);
             checkLogout(msg, s);
-
 
             if (clients.size() < NUM_PLAYERS) continue;
             while (clients.size() == NUM_PLAYERS) {

@@ -14,7 +14,9 @@ public:
      * @param p puerto del servidor
      * @param n nick del usuario
      */
-    Player(const char * s, const char * p, char * n): socket(s, p, false) {
+    Player(const char * s, const char * p, char * n)  {
+        serverS = Socket();
+        socket = Socket(s, p, false, serverS);
         nicks[0] = n;
         resetGame();
     };
@@ -25,7 +27,7 @@ public:
     void login()
     {
         Message em(nicks[0], Message::LOGIN);
-        socket.send(em, socket);
+        socket.send(em,  serverS);
     }
 
     /**
@@ -34,7 +36,7 @@ public:
     void logout()
     {
         Message em(nicks[0], Message::LOGOUT);
-        socket.send(em, socket);
+        socket.send(em,  serverS);
     }
 
     /**
@@ -76,7 +78,7 @@ public:
             else continue;
   
             // Enviar al servidor usando socket
-            socket.send(em, socket);
+            socket.send(em, serverS);
         }
     }
 
@@ -92,8 +94,7 @@ public:
             //render();
             Message msg;
             socket.recv(msg);
-            std::cout << "Recibe" << std::endl;
-
+            std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
             switch (msg.type)
             {
                 case Message::LOGIN_INFO:
@@ -145,7 +146,6 @@ public:
                     else state = LOSE;
                 }
             }
-            std::cout << "Procesa" << std::endl;
         }
     }
 
@@ -168,6 +168,7 @@ private:
      * Socket para comunicar con el servidor
      */
     Socket socket;
+    Socket serverS;
 
     /**
      * Nicks de los jugadores

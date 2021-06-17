@@ -63,7 +63,7 @@ public:
      *    @param address cadena que representa la dirección o nombre
      *    @param port cadena que representa el puerto o nombre del servicio
      */
-    Socket(const char * address, const char * port, bool passive)
+    Socket(const char * address, const char * port, bool passive, Socket& serverSocket)
     {
         //Construir un socket de tipo AF_INET y SOCK_DGRAM usando getaddrinfo.
         //Con el resultado inicializar los miembros sd, sa y sa_len de la clase
@@ -71,10 +71,15 @@ public:
         struct addrinfo hints;
         struct addrinfo * res;
 
+        if(!passive)
+        {
+            sd = socket(AF_INET, SOCK_STREAM, 0);
+        }
+
         memset((void *) & hints, 0, sizeof(struct addrinfo));
-        //if(passive) hints.ai_flags = AI_PASSIVE;
+        if(passive) hints.ai_flags = AI_PASSIVE;
         hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_DGRAM;
+        hints.ai_socktype = SOCK_STREAM;
 
         int rc = getaddrinfo(address, port, &hints, &res);
 
@@ -82,18 +87,27 @@ public:
         {
             std::cerr << "[getaddrinfo] " << gai_strerror(rc) << std::endl;
         }
-        sd = socket(res->ai_family, res->ai_socktype, 0);
+
+        if(passive) sd = socket(res->ai_family, res->ai_socktype, 0);
+        else
+        {
+            int serverS = socket(res->ai_family, res->ai_socktype, 0);
+            connect(serverS, res->ai_addr, res->ai_addrlen);
+            serverSocket = Socket(serverS, res->ai_addr, res->ai_addrlen);
+        } 
 
         if(sd == -1)
         {
             std::cout << "[socket] " << strerror(errno) << "\n";
         }
-        
+
         sa = *res->ai_addr;
         sa_len = res->ai_addrlen;
 
         freeaddrinfo(res);
     }
+
+    Socket(int s, sockaddr socka, socklen_t socka_len ):sd(s), sa(socka), sa_len(socka_len) {};
 
     /**
      *  Inicializa un Socket copiando los parámetros del socket
@@ -121,16 +135,16 @@ public:
 
         char buffer[MAX_MESSAGE_SIZE];
 
-        ssize_t bytes = ::recvfrom(sd, buffer, MAX_MESSAGE_SIZE, 0, &sa, &sa_len);
+        if ( sock != 0 )
+        {
+            sock = new Socket(&sa, sa_len);
+        }
+
+        ssize_t bytes = ::recv(sd, buffer, MAX_MESSAGE_SIZE, 0);
 
         if ( bytes <= 0 )
         {
             return -1;
-        }
-
-        if ( sock != 0 )
-        {
-            sock = new Socket(&sa, sa_len);
         }
 
         obj.from_bin(buffer);
@@ -145,6 +159,8 @@ public:
         return recv(obj, s);
     }
 
+    int getSocket(){return sd;}
+
     /**
      *  Envía un mensaje de aplicación definido por un objeto Serializable.
      *
@@ -157,9 +173,21 @@ public:
     int send(Serializable& obj, const Socket& sock)
     {
         obj.to_bin();
-        int bytes = sendto(sd, (void*) obj.data(), obj.size(), 0, &sock.sa, sock.sa_len);
-        if(bytes < 0) return -1;
+
+        if(::send(sock.sd, obj.data(), obj.size(), 0) < 0){
+            std::cerr << strerror(errno) << '\n';
+            return -1;
+        }
         return 0;
+    }
+
+    Socket* accept()
+    {
+        struct sockaddr client;
+        socklen_t clientLen = sizeof(struct sockaddr);
+        int s = ::accept(sd, &client, &clientLen);
+
+        return new Socket(s, client, clientLen);
     }
 
     /**
@@ -169,6 +197,16 @@ public:
     {
         return ::bind(sd, (const struct sockaddr *) &sa, sa_len);
     }
+
+    int listen()
+    {
+        return ::listen(sd, 0);
+    }
+
+    /*int close()
+    {
+        return ::close(sd);
+    }*/
 
     friend std::ostream& operator<<(std::ostream& os, const Socket& dt)
     {
