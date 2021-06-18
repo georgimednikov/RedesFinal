@@ -63,7 +63,7 @@ public:
      *    @param address cadena que representa la dirección o nombre
      *    @param port cadena que representa el puerto o nombre del servicio
      */
-    Socket(const char * address, const char * port, bool passive, Socket& serverSocket)
+    Socket(const char * address, const char * port, bool passive)
     {
         //Construir un socket de tipo AF_INET y SOCK_DGRAM usando getaddrinfo.
         //Con el resultado inicializar los miembros sd, sa y sa_len de la clase
@@ -156,12 +156,12 @@ public:
         return 0;
     }
 
-    int recv(Serializable &obj) //Descarta los datos del otro extremo
-    {
-        Socket * s = 0;
+    // int recv(Serializable &obj) //Descarta los datos del otro extremo
+    // {
+    //     Socket * s = 0;
 
-        return recv(obj, s);
-    }
+    //     return recv(obj, s);
+    // }
 
     int getSocket(){return sd;}
 
@@ -174,11 +174,11 @@ public:
      *
      *    @return 0 en caso de éxito o -1 si error
      */
-    int send(Serializable& obj)
+    int send(Serializable& obj, Socket sock)
     {
         obj.to_bin();
 
-        if(::send(sd, obj.data(), obj.size(), 0) < 0){
+        if(::send(sock.sd, obj.data(), obj.size(), 0) < 0){
             std::cerr << strerror(errno) << '\n';
             return -1;
         }

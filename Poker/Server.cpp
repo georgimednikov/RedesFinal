@@ -16,11 +16,7 @@ const int NUM_PLAYERS = 4;
 class PokerServer
 {
 public:
-    PokerServer(const char * s, const char * p): socket(s, p, true, socket)
-    {
-        socket.bind();
-        socket.listen();
-    };
+    PokerServer(const char * s, const char * p): socket(s, p, true) {};
 
     /**
      *  Thread principal del servidor recive mensajes en el socket y
@@ -33,9 +29,9 @@ public:
             std::cout << clients.size() << std::endl;
             
             s = socket.accept();
-            socket.recv(msg, s);
+            socket.recv(msg);
 
-            std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
+            std::cout << msg.nick << " " << (int)msg.type << " " << msg.message1 << " " << msg.message2 << std::endl;
             checkLogin(msg, s);
             checkLogout(msg, s);
 
@@ -95,7 +91,7 @@ private:
         //Se mira cuantas cartas cada jugador quiere descartar
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
-                socket.recv(m, s);
+                socket.recv(m);
                 if (checkLogout(m, s)) return;
             }
             while (s != clients[i].first.get() && m.type != Message::DISCARD);
@@ -110,7 +106,7 @@ private:
         //Se mira quien se retira
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
-                socket.recv(m, s);
+                socket.recv(m);
                 if (checkLogout(m, s)) return;
             }
             while (s != clients[i].first.get() && m.type != Message::PASS && m.type != Message::BET);
@@ -125,7 +121,7 @@ private:
         //Se mira cuantas cartas cada jugador quiere descartar
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
-                socket.recv(m, s);
+                socket.recv(m);
                 if (checkLogout(m, s)) return;
             }
             while (s != clients[i].first.get() && m.type != Message::DISCARD);
@@ -140,7 +136,7 @@ private:
         //Se mira quien se retira
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
-                socket.recv(m, s);
+                socket.recv(m);
                 if (checkLogout(m, s)) return;
             }
             while (s != clients[i].first.get() && m.type != Message::PASS && m.type != Message::BET);

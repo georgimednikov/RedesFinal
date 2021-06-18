@@ -3,6 +3,7 @@
 #include "Socket.h"
 #include "Message.cpp"
 #include "Texture.cpp"
+#include "Font.cpp"
 #include "Deck.cpp"
 
 const int NUM_PLAYERS = 4;
@@ -10,10 +11,11 @@ const int NUM_PLAYERS = 4;
 const int WIN_WIDTH = 1200;
 const int WIN_HEIGHT = 900;
 
-const int CARD_WIDTH = 200;
-const int CARD_HEIGHT = 125;
-
+const int CARD_WIDTH = 125;
+const int CARD_HEIGHT = 200;
 const int CARD_OFFSET = 10;
+
+const std::string FONT_SOURCE = "./RetroGaming.ttf";
 
 class Player
 {
@@ -24,8 +26,7 @@ public:
      * @param n nick del usuario
      */
     Player(const char * s, const char * p, char * n)  {
-        serverS = Socket();
-        socket = Socket(s, p, false, serverS);
+        socket = Socket(s, p, false);
         nicks[0] = n;
         resetGame();
     };
@@ -36,7 +37,7 @@ public:
     void login()
     {
         Message em(nicks[0], Message::LOGIN);
-        socket.send(em,  serverS);
+        socket.send(em, socket);
     }
 
     /**
@@ -45,7 +46,7 @@ public:
     void logout()
     {
         Message em(nicks[0], Message::LOGOUT);
-        socket.send(em,  serverS);
+        socket.send(em, socket);
     }
 
     /**
@@ -71,6 +72,7 @@ public:
             if (inst == "LOGOUT") em.type = Message::LOGOUT;
             else if (inst == "PASS") em.type = Message::PASS;
             else if (inst == "BET") em.type = Message::BET;
+            else if (inst == "login") em.type = Message::LOGIN;
             else if (inst == "DISCARD") {
                 em.type = Message::DISCARD;
                 space_pos = inp.find(" ");
@@ -87,7 +89,7 @@ public:
             else continue;
   
             // Enviar al servidor usando socket
-            socket.send(em, serverS);
+            socket.send(em, socket);
         }
     }
 
@@ -97,10 +99,10 @@ public:
      */
     void net_thread()
     {
-        //initRender();
+        initRender();
         while(true)
         {
-            //render();
+            render();
             Message msg;
             socket.recv(msg);
             std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
@@ -117,7 +119,7 @@ public:
                 {                
                     int pos = searchNick(msg.nick);
                     if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
-                    for (int i = 0; i < msg.message1; i++) discarded[pos][i] = true;
+                    discarded[pos] = msg.message1;
                     break;
                 }
                 case Message::CARDS:
@@ -177,7 +179,6 @@ private:
      * Socket para comunicar con el servidor
      */
     Socket socket;
-    Socket serverS;
 
     /**
      * Nicks de los jugadores
@@ -193,7 +194,7 @@ private:
     /**
      * Descartes de los jugadores
      */
-    bool discarded[NUM_PLAYERS][2];
+    int discarded[NUM_PLAYERS];
 
     /**
      * Cartas en la mesa
@@ -213,11 +214,12 @@ private:
     }
 
     void resetState() {
-        for (int i = 0; i < NUM_PLAYERS; i++)
+        for (int i = 0; i < NUM_PLAYERS; i++) {
             for (int j = 0; j < 2; j++) {
                 hands[i][j] = -1;
-                discarded[i][j] = false;
             }
+            discarded[i] = 0;
+        }
         cardsTable.clear();
         state = PLAYING;
     }
@@ -227,10 +229,11 @@ private:
         winX = winY = SDL_WINDOWPOS_CENTERED;
         // InicializaciOn del sistema, ventana y renderer
         SDL_Init(SDL_INIT_EVERYTHING);
-        window = SDL_CreateWindow("Poker De-lux", winX, winY, 800, 600, SDL_WINDOW_SHOWN);
+        window = SDL_CreateWindow("Poker De-lux", winX, winY, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_SHOWN);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
         
         texture = new Texture(renderer, DECK_SOURCE);
+        font = new Font(FONT_SOURCE, 10);
     }
 
     void render() {
@@ -240,24 +243,36 @@ private:
         double angle = 0;
         SDL_Rect dest, source; dest.w = CARD_WIDTH; dest.h = CARD_HEIGHT;
         for (int i = 0; i < NUM_PLAYERS; i++) {
-            angle = i * (360 / NUM_PLAYERS) ;
+            angle = i * (360 / NUM_PLAYERS);
+            angle *= (M_PI / 180);
 
+            int ax = ( WIN_WIDTH / 2 - CARD_HEIGHT/2 - CARD_OFFSET) * sin(angle) + (WIN_WIDTH / 2), 
+                ay = ( WIN_HEIGHT / 2 - CARD_HEIGHT/2 - CARD_OFFSET) * cos(angle) + (WIN_HEIGHT / 2);
             for (int j = 0; j < 2; j++) {
+                if (hands[i][j] < -1) break;
+                dest.x = ax + (((- 1 + j * 2) * (CARD_OFFSET + (CARD_WIDTH) * ( 1 - j )) + CARD_WIDTH / 2) * (cos(angle)));
+                dest.y = ay + (((- 1 + j * 2) * (CARD_OFFSET + (CARD_WIDTH) * ( 1 - j )) + CARD_WIDTH / 2) * (-sin(angle)));
 
-                int ax = ( WIN_WIDTH / 2 - CARD_HEIGHT) * cos(angle-90) + WIN_WIDTH/2, ay = (WIN_HEIGHT / 2 - CARD_HEIGHT) * sin(angle-90) + WIN_HEIGHT / 2;
+                if(cos(angle) == 0) dest.w = CARD_HEIGHT, dest.h = CARD_WIDTH;
 
-                dest.x = ax + ((- 1 + j * 2) * (CARD_OFFSET + CARD_WIDTH * ( 1 - j )) * (-sin(angle-90)));
-                dest.y = ay + ((- 1 + j * 2) * (CARD_OFFSET + CARD_WIDTH * ( 1 - j )) * (cos(angle-90)));
+                dest.x -= dest.w / 2;
+                dest.y -= dest.h / 2;
 
                 Deck::getCardCoor(hands[i][j], source.x, source.y, source.w, source.h); 
-                texture->render(dest, angle, source);
+                texture->render(0, 0);
             }
-            for (int j = 0; j < 2; j++) {
-                if (discarded[i][j] < -1) break;
-                dest.x = 0; dest.y = 0;
-                Deck::getCardCoor(discarded[i][j], source.x, source.y, source.w, source.h); 
-                texture->render(dest, angle, source);
-            }
+
+            Texture* nick = new Texture(renderer, nicks[i], font);
+            dest.x = 0, dest.y = 0, dest.w = 0, dest.h = 0;
+            texture->render(dest, source);
+        }
+
+        int ax = WIN_WIDTH / 2 - (CARD_WIDTH + CARD_OFFSET) *  (cardsTable.size() / 2.0);
+        dest.y = WIN_HEIGHT / 2 - CARD_HEIGHT / 2, dest.w = CARD_WIDTH, dest.h = CARD_HEIGHT;
+        for (int j = 0; j < cardsTable.size(); j++) {
+            dest.x = ax + (CARD_WIDTH + CARD_OFFSET * 2) * j;
+            Deck::getCardCoor(cardsTable[j], source.x, source.y, source.w, source.h); 
+            texture->render(dest, source);
         }
 
         SDL_RenderPresent(renderer); //Draw
@@ -266,6 +281,7 @@ private:
     SDL_Window* window;
     SDL_Renderer* renderer;
     Texture* texture;
+    Font* font;
 };
 
 int main(int argc, char **argv)

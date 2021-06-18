@@ -1,27 +1,37 @@
-#include "Font.h"
+#pragma once
+#include <SDL2/SDL_ttf.h>
 #include <iostream>
+#include <string>
 using namespace std;
 
-bool Font::load(const string& fileName, int size) {
-	font_ = TTF_OpenFont(fileName.c_str(), size);
-	if (font_ == nullptr) {
-		throw "No se puede cargar el archivo: " + fileName;
-	}
-	return font_;
-}
+class Font {
+private:
+	TTF_Font* font_;
 
-void Font::close() {
-	if (font_) {
-		TTF_CloseFont(font_);
-		font_ = nullptr;
-	}
-}
+public:
+	Font() : font_(nullptr) {};
+	Font(const string& fileName, int size) { load(fileName, size); };
+	virtual ~Font() { close(); };
 
-SDL_Surface* Font::renderText(const string& text, SDL_Color color) const {
-	if (font_) {
-		return TTF_RenderText_Solid(font_, text.c_str(), color);
+	bool load(const string& fileName, int size) {
+		font_ = TTF_OpenFont(fileName.c_str(), size);
+		if (font_ == nullptr) {
+			throw "No se puede cargar el archivo: " + fileName;
+		}
+		return font_;
 	}
-	else {
-		return nullptr;
+	void close() {
+		if (font_) {
+			TTF_CloseFont(font_);
+			font_ = nullptr;
+		}
 	}
-}
+	SDL_Surface* renderText(const string& text, SDL_Color color) const {
+		if (font_) {
+			return TTF_RenderText_Solid(font_, text.c_str(), color);
+		}
+		else {
+			return nullptr;
+		}
+	}
+};
