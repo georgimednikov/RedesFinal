@@ -2,9 +2,18 @@
 #include "Serializable.h"
 #include "Socket.h"
 #include "Message.cpp"
-#include "Texture.h"
+#include "Texture.cpp"
+#include "Deck.cpp"
 
 const int NUM_PLAYERS = 4;
+
+const int WIN_WIDTH = 1200;
+const int WIN_HEIGHT = 900;
+
+const int CARD_WIDTH = 200;
+const int CARD_HEIGHT = 125;
+
+const int CARD_OFFSET = 10;
 
 class Player
 {
@@ -179,7 +188,7 @@ private:
     /**
      * Manos de los jugadores
      */
-    int hands[NUM_PLAYERS][2]; // 0 significa que no se conoce la carta, -1 que se ha retirado
+    int hands[NUM_PLAYERS][2]; // -1 significa que no se conoce la carta, -2 que se ha retirado
 
     /**
      * Descartes de los jugadores
@@ -206,7 +215,7 @@ private:
     void resetState() {
         for (int i = 0; i < NUM_PLAYERS; i++)
             for (int j = 0; j < 2; j++) {
-                hands[i][j] = 0;
+                hands[i][j] = -1;
                 discarded[i][j] = false;
             }
         cardsTable.clear();
@@ -220,16 +229,43 @@ private:
         SDL_Init(SDL_INIT_EVERYTHING);
         window = SDL_CreateWindow("Poker De-lux", winX, winY, 800, 600, SDL_WINDOW_SHOWN);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+        
+        texture = new Texture(renderer, DECK_SOURCE);
     }
 
     void render() {
         SDL_SetRenderDrawColor(renderer, 48, 132, 70, 255);
         SDL_RenderClear(renderer); //Clear
+
+        double angle = 0;
+        SDL_Rect dest, source; dest.w = CARD_WIDTH; dest.h = CARD_HEIGHT;
+        for (int i = 0; i < NUM_PLAYERS; i++) {
+            angle = i * (360 / NUM_PLAYERS) ;
+
+            for (int j = 0; j < 2; j++) {
+
+                int ax = ( WIN_WIDTH / 2 - CARD_HEIGHT) * cos(angle-90) + WIN_WIDTH/2, ay = (WIN_HEIGHT / 2 - CARD_HEIGHT) * sin(angle-90) + WIN_HEIGHT / 2;
+
+                dest.x = ax + ((- 1 + j * 2) * (CARD_OFFSET + CARD_WIDTH * ( 1 - j )) * (-sin(angle-90)));
+                dest.y = ay + ((- 1 + j * 2) * (CARD_OFFSET + CARD_WIDTH * ( 1 - j )) * (cos(angle-90)));
+
+                Deck::getCardCoor(hands[i][j], source.x, source.y, source.w, source.h); 
+                texture->render(dest, angle, source);
+            }
+            for (int j = 0; j < 2; j++) {
+                if (discarded[i][j] < -1) break;
+                dest.x = 0; dest.y = 0;
+                Deck::getCardCoor(discarded[i][j], source.x, source.y, source.w, source.h); 
+                texture->render(dest, angle, source);
+            }
+        }
+
         SDL_RenderPresent(renderer); //Draw
     }
 
     SDL_Window* window;
     SDL_Renderer* renderer;
+    Texture* texture;
 };
 
 int main(int argc, char **argv)

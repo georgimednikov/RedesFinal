@@ -93,7 +93,7 @@ public:
         {
             int serverS = socket(res->ai_family, res->ai_socktype, 0);
             connect(serverS, res->ai_addr, res->ai_addrlen);
-            serverSocket = Socket(serverS, res->ai_addr, res->ai_addrlen);
+            serverSocket = Socket(serverS, *res->ai_addr, res->ai_addrlen);
         } 
 
         if(sd == -1)
@@ -105,6 +105,14 @@ public:
         sa_len = res->ai_addrlen;
 
         freeaddrinfo(res);
+    }
+
+    Socket() {
+        struct sockaddr socka;
+        socklen_t socka_len = sizeof(struct sockaddr);
+        sd = -1;
+        sa = socka;
+        sa_len = socka_len;
     }
 
     Socket(int s, sockaddr socka, socklen_t socka_len ):sd(s), sa(socka), sa_len(socka_len) {};

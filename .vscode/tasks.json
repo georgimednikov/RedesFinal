@@ -4,7 +4,7 @@
 		{
 			"type": "shell",
 			"label": "Compilar Player",
-			"command": "g++ -o ${fileBasenameNoExtension}.exe ${relativeFile} -lSDL2main -lSDL2 -lpthread",
+			"command": "g++ -o ${fileBasenameNoExtension}.exe ${relativeFile} -lSDL2main -lSDL2 -lpthread -lSDL2_image",
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},

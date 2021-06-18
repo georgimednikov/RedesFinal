@@ -16,7 +16,7 @@ const int NUM_PLAYERS = 4;
 class PokerServer
 {
 public:
-    PokerServer(const char * s, const char * p): socket(s, p, true, Socket s)
+    PokerServer(const char * s, const char * p): socket(s, p, true, socket)
     {
         socket.bind();
         socket.listen();

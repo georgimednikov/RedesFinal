@@ -1,11 +1,17 @@
 #include <vector>
 #include <random>
 #include <ctime>
+#include <string.h>
 
 typedef int card;
 
+const std::string DECK_SOURCE = "./Cards.png";
+
 const int NUM_CARDS = 52; // Numero de cartas en el mazo
 const int NUM_CARDS_RANK = 13; // Numero de cartas por palo
+
+const int CARD_IMAGE_WIDTH = 360;
+const int CARD_IMAGE_HEIGHT = 504;
 
 enum Suit {
     hearts,
@@ -51,5 +57,19 @@ public:
     {
         if(a % NUM_CARDS_RANK >= b % NUM_CARDS_RANK) return a;
         else return b;
+    }
+
+    static void getCardCoor(card c, int& x, int& y, int& w, int& h)
+    {
+        w = CARD_IMAGE_WIDTH;
+        h = CARD_IMAGE_HEIGHT;
+
+        if (c == -1) {
+            x = NUM_CARDS_RANK * CARD_IMAGE_WIDTH;
+            y = 0;
+            return;
+        }
+        x = (c % NUM_CARDS_RANK) * CARD_IMAGE_WIDTH;
+        y = (c / NUM_CARDS_RANK) * CARD_IMAGE_HEIGHT;
     }
 };
