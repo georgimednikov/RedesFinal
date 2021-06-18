@@ -71,13 +71,12 @@ public:
         struct addrinfo hints;
         struct addrinfo * res;
 
-        if(!passive)
-        {
-            sd = socket(AF_INET, SOCK_STREAM, 0);
-        }
-
         memset((void *) & hints, 0, sizeof(struct addrinfo));
-        if(passive) hints.ai_flags = AI_PASSIVE;
+        
+        if(passive)
+        {
+            hints.ai_flags = AI_PASSIVE;
+        }
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_STREAM;
 
@@ -88,21 +87,25 @@ public:
             std::cerr << "[getaddrinfo] " << gai_strerror(rc) << std::endl;
         }
 
-        if(passive) sd = socket(res->ai_family, res->ai_socktype, 0);
-        else
-        {
-            int serverS = socket(res->ai_family, res->ai_socktype, 0);
-            connect(serverS, res->ai_addr, res->ai_addrlen);
-            serverSocket = Socket(serverS, *res->ai_addr, res->ai_addrlen);
-        } 
-
+        sa     = *res->ai_addr;
+        sa_len = res->ai_addrlen;
+        
+        sd = socket(res->ai_family, res->ai_socktype, 0);
+        
         if(sd == -1)
         {
             std::cout << "[socket] " << strerror(errno) << "\n";
         }
-
-        sa = *res->ai_addr;
-        sa_len = res->ai_addrlen;
+        
+        if(!passive)
+        {
+            connect(sd, res->ai_addr, res->ai_addrlen);
+        }
+        else
+        {
+            bind();
+            listen();
+        }
 
         freeaddrinfo(res);
     }
@@ -115,6 +118,7 @@ public:
         sa_len = socka_len;
     }
 
+    //Clientes en el Server
     Socket(int s, sockaddr socka, socklen_t socka_len ):sd(s), sa(socka), sa_len(socka_len) {};
 
     /**
@@ -136,17 +140,9 @@ public:
      *
      *    @return 0 en caso de éxito o -1 si error (cerrar conexión)
      */
-    int recv(Serializable &obj, Socket * &sock)
+    int recv(Serializable &obj)
     {
-        struct sockaddr sa;
-        socklen_t sa_len = sizeof(struct sockaddr);
-
         char buffer[MAX_MESSAGE_SIZE];
-
-        if ( sock != 0 )
-        {
-            sock = new Socket(&sa, sa_len);
-        }
 
         ssize_t bytes = ::recv(sd, buffer, MAX_MESSAGE_SIZE, 0);
 
@@ -178,11 +174,11 @@ public:
      *
      *    @return 0 en caso de éxito o -1 si error
      */
-    int send(Serializable& obj, const Socket& sock)
+    int send(Serializable& obj)
     {
         obj.to_bin();
 
-        if(::send(sock.sd, obj.data(), obj.size(), 0) < 0){
+        if(::send(sd, obj.data(), obj.size(), 0) < 0){
             std::cerr << strerror(errno) << '\n';
             return -1;
         }
