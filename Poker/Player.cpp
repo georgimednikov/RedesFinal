@@ -99,12 +99,12 @@ public:
      */
     void net_thread()
     {
-        initRender();
+        //initRender();
         while(true)
         {
-            render();
+            //render();
             Message msg;
-            socket.recv(msg);
+            socket.recv(msg, socket);
             std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
             switch (msg.type)
             {
@@ -259,7 +259,7 @@ private:
                 dest.y -= dest.h / 2;
 
                 Deck::getCardCoor(hands[i][j], source.x, source.y, source.w, source.h); 
-                texture->render(0, 0);
+                //texture->render(0, 0);
             }
 
             Texture* nick = new Texture(renderer, nicks[i], font);

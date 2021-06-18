@@ -140,20 +140,21 @@ public:
      *
      *    @return 0 en caso de éxito o -1 si error (cerrar conexión)
      */
-    int recv(Serializable &obj)
+    int recv(Serializable &obj, Socket& sock)
     {
         char buffer[MAX_MESSAGE_SIZE];
 
-        ssize_t bytes = ::recv(sd, buffer, MAX_MESSAGE_SIZE, 0);
+        ssize_t bytes = ::recv(sock.sd, buffer, MAX_MESSAGE_SIZE, 0);
 
-        if ( bytes <= 0 )
+        if ( bytes < 0 )
         {
+            std::cerr << strerror(errno) << '\n';
             return -1;
         }
 
         obj.from_bin(buffer);
 
-        return 0;
+        return bytes;
     }
 
     // int recv(Serializable &obj) //Descarta los datos del otro extremo
@@ -177,7 +178,7 @@ public:
     int send(Serializable& obj, Socket sock)
     {
         obj.to_bin();
-
+        
         if(::send(sock.sd, obj.data(), obj.size(), 0) < 0){
             std::cerr << strerror(errno) << '\n';
             return -1;

@@ -12,8 +12,8 @@ public:
 
     enum MessageType
     {
-        PASS, //Se pasa la ronda
         LOGIN, //Se conecta un jugador
+        PASS, //Se pasa la ronda
         BET, //Se apuesta una cantidad
         DISCARD, //Se descarta 0, 1 o 2 cartas
         LOGOUT, //Se desconecta un jugador
