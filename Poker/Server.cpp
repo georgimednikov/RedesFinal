@@ -29,9 +29,14 @@ public:
             std::cout << clients.size() << std::endl;
 
             s = socket.accept();
-            std::cout <<socket.recv(msg, *s) << std::endl;
 
-            std::cout <<"( " << msg.nick << " - " << (int)msg.type << " - " << (int)msg.message1 << " - " << (int)msg.message2 << " )"<< std::endl;
+            //std::cout <<"(" << msg.nick << " - " << (int)msg.type << " - " << (int)msg.message1 << " - " << (int)msg.message2 << ")"<< std::endl;
+            for (int i = 0; i < clients.size(); i++) {
+                socket.recv(msg, *clients[i].first.get());
+                checkLogin(msg, clients[i].first.get());
+                checkLogout(msg, clients[i].first.get());
+            }
+            socket.recv(msg, *s);
             checkLogin(msg, s);
             checkLogout(msg, s);
 

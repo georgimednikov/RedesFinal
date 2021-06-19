@@ -7,13 +7,14 @@ class Texture {
 private:
 	SDL_Texture* texture_;
 	SDL_Renderer* renderer_;
+public:
 	int width_;
 	int height_;
 
 public:
 	Texture() : texture_(nullptr), renderer_(nullptr) {}
 	Texture(SDL_Renderer* renderer, const string& fileName) : texture_(nullptr) { loadFromImg(renderer, fileName); }
-	Texture(SDL_Renderer* renderer, const string& text, const Font* font, const SDL_Color& color = { 0, 0, 0, 255 }) : texture_(nullptr) { loadFromText(renderer, text, font, color); }
+	Texture(SDL_Renderer* renderer, const string& text, const Font* font, const SDL_Color& color = { 255, 255, 255, 255 }) : texture_(nullptr) { loadFromText(renderer, text, font, color); }
 
 	~Texture() { close(); }
 

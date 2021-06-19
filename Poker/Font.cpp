@@ -13,12 +13,11 @@ public:
 	Font(const string& fileName, int size) { load(fileName, size); };
 	virtual ~Font() { close(); };
 
-	bool load(const string& fileName, int size) {
+	void load(const string& fileName, int size) {
 		font_ = TTF_OpenFont(fileName.c_str(), size);
 		if (font_ == nullptr) {
-			throw "No se puede cargar el archivo: " + fileName;
+			std::cout << "Font " << TTF_GetError() << "\n";
 		}
-		return font_;
 	}
 	void close() {
 		if (font_) {

@@ -154,15 +154,8 @@ public:
 
         obj.from_bin(buffer);
 
-        return bytes;
+        return 0;
     }
-
-    // int recv(Serializable &obj) //Descarta los datos del otro extremo
-    // {
-    //     Socket * s = 0;
-
-    //     return recv(obj, s);
-    // }
 
     int getSocket(){return sd;}
 
@@ -178,7 +171,7 @@ public:
     int send(Serializable& obj, Socket sock)
     {
         obj.to_bin();
-        
+
         if(::send(sock.sd, obj.data(), obj.size(), 0) < 0){
             std::cerr << strerror(errno) << '\n';
             return -1;

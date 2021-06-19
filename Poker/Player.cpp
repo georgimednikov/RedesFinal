@@ -15,7 +15,7 @@ const int CARD_WIDTH = 125;
 const int CARD_HEIGHT = 200;
 const int CARD_OFFSET = 10;
 
-const std::string FONT_SOURCE = "./RetroGaming.ttf";
+const std::string FONT_SOURCE = "font.ttf";
 
 class Player
 {
@@ -29,6 +29,9 @@ public:
         socket = Socket(s, p, false);
         nicks[0] = n;
         resetGame();
+        cardsTable.push_back(3);
+        cardsTable.push_back(19);
+        cardsTable.push_back(30);
     };
 
     /**
@@ -99,10 +102,9 @@ public:
      */
     void net_thread()
     {
-        //initRender();
         while(true)
         {
-            //render();
+            if (state == PLAYING) render();
             Message msg;
             socket.recv(msg, socket);
             std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
@@ -113,6 +115,10 @@ public:
                     if (msg.nick == nicks[0]) continue;
                     nicks[usedNicks] = msg.nick; //Se entiende que el servidor no permite que se conecten mas de NUM_PLAYERS jugadores
                     usedNicks++;
+                    if (usedNicks == NUM_PLAYERS) {
+                        state = PLAYING;
+                        initRender();
+                    }
                     break;
                 }
                 case Message::DISCARD_INFO:
@@ -164,6 +170,7 @@ public:
 private:
 
     enum State {
+        UNSTARTED,
         PLAYING,
         LOSE,
         WIN,
@@ -211,6 +218,7 @@ private:
     void resetGame() {
         resetState();
         usedNicks = 1;
+        state = UNSTARTED;
     }
 
     void resetState() {
@@ -232,14 +240,16 @@ private:
         window = SDL_CreateWindow("Poker De-lux", winX, winY, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_SHOWN);
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
         
+        TTF_Init();
         texture = new Texture(renderer, DECK_SOURCE);
-        font = new Font(FONT_SOURCE, 10);
+        font = new Font(FONT_SOURCE, 30);
     }
 
     void render() {
         SDL_SetRenderDrawColor(renderer, 48, 132, 70, 255);
         SDL_RenderClear(renderer); //Clear
 
+        Texture* text;
         double angle = 0;
         SDL_Rect dest, source; dest.w = CARD_WIDTH; dest.h = CARD_HEIGHT;
         for (int i = 0; i < NUM_PLAYERS; i++) {
@@ -259,12 +269,31 @@ private:
                 dest.y -= dest.h / 2;
 
                 Deck::getCardCoor(hands[i][j], source.x, source.y, source.w, source.h); 
-                //texture->render(0, 0);
+                texture->render(dest, angle * (180 / M_PI), source);
             }
 
-            Texture* nick = new Texture(renderer, nicks[i], font);
-            dest.x = 0, dest.y = 0, dest.w = 0, dest.h = 0;
-            texture->render(dest, source);
+            int xPos = ax;// + (CARD_WIDTH + CARD_OFFSET * 2) * ( cos(angle));
+            int yPos = ay;// + (CARD_WIDTH + CARD_OFFSET * 2) * (-sin(angle));
+
+            text = new Texture(renderer, "Discards: " + std::to_string(discarded[0]), font);
+            switch (i)
+            {
+            case 0:
+                xPos += CARD_WIDTH + CARD_OFFSET * 2;
+                break;
+            case 1:
+                xPos -= CARD_HEIGHT / 2 + CARD_OFFSET, yPos -= CARD_WIDTH + CARD_OFFSET * 2 + text->height_;
+                break;
+            case 2:
+                xPos -= CARD_WIDTH + CARD_OFFSET * 2 + text->width_;
+                break;
+            case 3:
+                xPos -= CARD_HEIGHT / 2, yPos += CARD_WIDTH + CARD_OFFSET * 2 + text->height_;
+                break;
+            }
+            text->render(xPos, yPos);
+            text = new Texture(renderer, nicks[0], font);
+            text->render(xPos, yPos - text->height_);
         }
 
         int ax = WIN_WIDTH / 2 - (CARD_WIDTH + CARD_OFFSET) *  (cardsTable.size() / 2.0);
@@ -282,6 +311,7 @@ private:
     SDL_Renderer* renderer;
     Texture* texture;
     Font* font;
+    //HACER DELETES
 };
 
 int main(int argc, char **argv)
