@@ -8,7 +8,7 @@
 #include "Socket.h"
 #include "Message.cpp"
 
-const int NUM_PLAYERS = 4;
+const int NUM_PLAYERS = 2;
 
 /**
  *  Clase para el servidor de poker
@@ -26,21 +26,26 @@ public:
         Message msg;
         Socket* s;
         while (true) {
-            std::cout << clients.size() << std::endl;
-
+            std::cout << "Clientes: " << clients.size() << std::endl;
+            // for (int i = 0; i < clients.size(); i++) {
+            //     socket.recv(msg, *clients[i].first.get());
+            //     checkLogout(msg, clients[i].first.get());
+            // }
+            // std::cout << "Se han mirado los mensajes de los clientes anteriores" << std::endl;
             s = socket.accept();
-
-            //std::cout <<"(" << msg.nick << " - " << (int)msg.type << " - " << (int)msg.message1 << " - " << (int)msg.message2 << ")"<< std::endl;
-            for (int i = 0; i < clients.size(); i++) {
-                socket.recv(msg, *clients[i].first.get());
-                checkLogin(msg, clients[i].first.get());
-                checkLogout(msg, clients[i].first.get());
-            }
+            //std::cout << "Se acepta" << std::endl;
             socket.recv(msg, *s);
             checkLogin(msg, s);
-            checkLogout(msg, s);
+            //std::cout << "Se han mirado los mensajes del cliente nuevo" << std::endl;
 
             if (clients.size() < NUM_PLAYERS) continue;
+            //std::cout << "Se empieza el juego" << std::endl;
+
+            for (int i = 0; i < NUM_PLAYERS; i++) {
+                Message msg(clients[i].second, Message::LOGIN_INFO);
+                sendPlayers(msg);
+            }
+
             while (clients.size() == NUM_PLAYERS) {
                 game();
             }
@@ -80,26 +85,29 @@ private:
         Message m;
         Socket* s;
 
-        //Se reparten 2 cartas a cada jugador
+        char c;
+        std::cout << "Se reparten 2 cartas a cada jugador\n";
         for (int i = 0; i < clients.size(); i++) {
             m = Message(clients[i].second, Message::CARDS, deck->draw(), deck->draw());
             socket.send(m, *clients[i].first.get());
         }
 
-        //Se ponen 2 cartas en la mesa
-        for (int i = 0; i < 2; i++) {
-            m = Message("Server", Message::CARD_TABLE, deck->draw());
-            cardsTable.push_back(m.message1);
-            sendPlayers(m);
-        }
+        std::cout << "Se ponen 2 cartas en la mesa\n";
+        m = Message("Server", Message::CARD_TABLE, deck->draw(), deck->draw());
+        cardsTable.push_back(m.message1); cardsTable.push_back(m.message2);
+        sendPlayers(m);
+        std::cin >> c;
 
-        //Se mira cuantas cartas cada jugador quiere descartar
+        std::cout << "Se mira cuantas cartas cada jugador quiere descartar\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
+            std::cout << "Pre get\n";
             do {
-                socket.recv(m, *(clients[i].first.get()));
+                socket.recv(m, *(clients[j].first.get()));
                 if (checkLogout(m, s)) return;
             }
             while (s != clients[i].first.get() && m.type != Message::DISCARD);
+            std::cout << "Post get\n";
+
             int count = 0; if (m.message1 != 0) {
                 count++;
                 if (m.message2 != 0) count++;
@@ -107,8 +115,9 @@ private:
             m.type = Message::DISCARD_INFO; m.message1 = count;
             sendPlayers(m);
         }
+        std::cin >> c;
 
-        //Se mira quien se retira
+        std::cout << "Se mira quien se retira\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, *(clients[i].first.get()));
@@ -118,12 +127,12 @@ private:
             sendPlayers(m);
         }
 
-        //Se pone otra carta en la mesa
+        std::cout << "Se pone otra carta en la mesa\n";
         m = Message("Server", Message::CARD_TABLE, deck->draw());
         cardsTable.push_back(m.message1);
         sendPlayers(m);
 
-        //Se mira cuantas cartas cada jugador quiere descartar
+        std::cout << "Se mira cuantas cartas cada jugador quiere descartar\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, *(clients[i].first.get()));
@@ -138,7 +147,7 @@ private:
             sendPlayers(m);
         }
 
-        //Se mira quien se retira
+        std::cout << "Se mira quien se retira\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, *(clients[i].first.get()));
@@ -148,26 +157,27 @@ private:
             sendPlayers(m);
         }
 
-        //Se muestran las cartas
+        std::cout << "Se muestran las cartas\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
             m = Message(clients[i].second, Message::CARDS, hands[i][0], hands[i][1]);
             sendPlayers(m);
         }
 
-        //Se comprueba quien gana
+        std::cout << "Se comprueba quien gana\n";
         int winner = checkWinner();
         if (winner >= 0) m = Message(clients[winner].second, Message::WINNER);
         else m = Message("Server", Message::WINNER);
         sendPlayers(m);
 
-        //Se resetea el juego
+        std::cout << "Se resetea el juego\n";
         m = Message("Server", Message::END_ROUND);
         sendPlayers(m);
         cardsTable.clear();
     }
 
     void sendPlayers(Message& m) {
-        for (int j = 0; j < NUM_PLAYERS; j++) {
+        for (int j = 0; j < clients.size(); j++) {
+            std::cout << "Manda a " << clients[j].second << " el mensaje: " << m.nick << " " << (int)m.type << " " << (int)m.message1 << " " << (int)m.message2 << "\n";
             socket.send(m, *clients[j].first.get());
         }
     }

@@ -99,7 +99,8 @@ public:
         
         if(!passive)
         {
-            connect(sd, res->ai_addr, res->ai_addrlen);
+            if(connect(sd, res->ai_addr, res->ai_addrlen))
+             std::cerr << "[connect] " << strerror(errno) << std::endl;
         }
         else
         {

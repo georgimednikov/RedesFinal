@@ -6,7 +6,7 @@
 #include "Font.cpp"
 #include "Deck.cpp"
 
-const int NUM_PLAYERS = 4;
+const int NUM_PLAYERS = 2;
 
 const int WIN_WIDTH = 1200;
 const int WIN_HEIGHT = 900;
@@ -29,9 +29,6 @@ public:
         socket = Socket(s, p, false);
         nicks[0] = n;
         resetGame();
-        cardsTable.push_back(3);
-        cardsTable.push_back(19);
-        cardsTable.push_back(30);
     };
 
     /**
@@ -104,7 +101,7 @@ public:
     {
         while(true)
         {
-            if (state == PLAYING) render();
+            //if (state == PLAYING) render();
             Message msg;
             socket.recv(msg, socket);
             std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
@@ -117,7 +114,7 @@ public:
                     usedNicks++;
                     if (usedNicks == NUM_PLAYERS) {
                         state = PLAYING;
-                        initRender();
+                        //initRender();
                     }
                     break;
                 }
@@ -136,7 +133,10 @@ public:
                     break;
                 }
                 case Message::CARD_TABLE:
-                {    cardsTable.push_back(msg.message1);
+                {    
+                    cardsTable.push_back(msg.message1);
+                    cardsTable.push_back(msg.message2);
+                    std::cout << "No crashea\n";
                     break;
                 }
                 case Message::PASS:
