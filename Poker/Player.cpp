@@ -63,7 +63,7 @@ public:
 
             Message em = Message();
             em.nick = nicks[0];
-            if (inst == "l")
+            if (inst == "LOGOUT")
             {
                 em.type = Message::LOGOUT;
                 socket.send(em, socket);
@@ -85,6 +85,7 @@ public:
                     inp = inp.substr(space_pos + 1);
                     em.message2 = std::stoi(inp);
                 }
+                if (em.message1 < 0 || em.message1 > 2 || em.message2 < 0 || em.message2 > 2) continue;
             }
             else continue;
   
@@ -110,7 +111,6 @@ public:
         while(true) {
             Message msg;
             socket.recv(msg, socket);
-            std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
             switch (msg.type)
             {
                 case Message::LOGIN_INFO:
@@ -324,6 +324,7 @@ private:
 };
 
 int main(int argc, char **argv) {
+    if (argc != 4 || argv[1] == "Server") return -1;
     Player ec(argv[1], argv[2], argv[3]);
     std::thread net_thread([&ec](){ ec.net_thread(); }); net_thread.detach();
     ec.login();
