@@ -98,11 +98,13 @@ public:
             std::cout << "[socket] " << strerror(errno) << "\n";
         }
         
+        //Si no es pasivo se conecta
         if(!passive)
         {
             if(connect(sd, res->ai_addr, res->ai_addrlen))
              std::cerr << "[connect] " << strerror(errno) << std::endl;
         }
+        //Si no deja que otros se conecten escuchando
         else
         {
             bind();

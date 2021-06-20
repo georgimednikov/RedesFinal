@@ -3,17 +3,22 @@
 #include <ctime>
 #include <string.h>
 
-typedef int card;
+// card / NUM_CARDS_RANK = Palo
+// card % NUM_CARDS_RANK = Valor
+typedef uint8_t card;
 
 const std::string DECK_SOURCE = "./Cards.png";
 
-const int NUM_CARDS = 52; // Numero de cartas en el mazo
-const int NUM_CARDS_RANK = 13; // Numero de cartas por palo
+const int NUM_PLAYERS = 4;
 
+const int NUM_CARDS = 52; //Numero de cartas en el mazo
+const int NUM_CARDS_RANK = 13; //Numero de cartas por palo
+
+//Ancho y alto de las cartas en la imagen fuente
 const int CARD_IMAGE_WIDTH = 360;
 const int CARD_IMAGE_HEIGHT = 504;
 
-enum Suit {
+enum Suit { //Palos: Corazones, Diamantes, Picas, Trebol
     hearts,
     diamonds,
     spades,
@@ -25,6 +30,7 @@ private:
     std::vector<card> deck;
 
 public:
+    //Mete las cartas en la baraja y la baraja
     Deck() {
         std::srand(std::time(nullptr));
         for (int i = 0; i < NUM_CARDS; i++)
@@ -32,6 +38,7 @@ public:
         shuffle();
     }
 
+    //Baraja las cartas de la baraja
     void shuffle() {
         card aux;
         for (int i = 0; i < deck.size(); i++) {
@@ -42,23 +49,27 @@ public:
         }
     }
 
+    //Roba la carta de arriba de la baraja y la retira
     card draw() {
         card top = deck.back();
         deck.pop_back();
         return top;
     }
 
+    //Compara palos
     static bool SameSuit(card a, card b)
     {
         return (a / NUM_CARDS_RANK == b / NUM_CARDS_RANK );
     }
 
+    //Devuelve el valor de la carta más alta
     static int HighestCard(card a, card b)
     {
         if(a % NUM_CARDS_RANK >= b % NUM_CARDS_RANK) return a;
         else return b;
     }
 
+    //Encuentra las coordenadas de una carta en la imagen fuente
     static void getCardCoor(card c, int& x, int& y, int& w, int& h)
     {
         w = CARD_IMAGE_WIDTH;

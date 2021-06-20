@@ -12,14 +12,14 @@ public:
 
     enum MessageType
     {
-        LOGIN, //Se conecta un jugador
-        PASS, //Se pasa la ronda
-        BET, //Se apuesta una cantidad
-        DISCARD, //Se descarta 0, 1 o 2 cartas
+        LOGIN, //Se conecta un jugador. Usa Nick
+        //PASS, //Se pasa la ronda 
+        //BET, //Se apuesta una cantidad
+        DISCARD, //Un jugador descarta cartas. Pueden ser 0, 1 para la de la izquierda, 2 para la derecha y 1 2 para ambas.
         LOGOUT, //Se desconecta un jugador
         CARDS, //Que cartas tiene un jugador
         CARD_TABLE, //Nueva carta sobre la mesa
-        LOGIN_INFO, //La información que se le da a un jugador cuando se une
+        LOGIN_INFO, //Nick de cada jugador que se da a los clientes
         DISCARD_INFO, //Cuantas cartas ha descartado un jugador
         END_ROUND, //Se resetea el estado del juego
         WINNER //Quien ha ganado la ronda
