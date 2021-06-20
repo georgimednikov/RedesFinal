@@ -59,7 +59,7 @@ public:
     	dest.h = height_;
     	SDL_Rect frame = { 0, 0, width_, height_ };
     	render(dest, frame);
-}
+	}
 
 	//Renderiza un frame de la textura en el destRect, si no hay frame se renderiza toda la textura
 	void render(const SDL_Rect& dest, const SDL_Rect& frame) const {

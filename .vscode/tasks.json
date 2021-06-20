@@ -16,7 +16,7 @@
 		{
 			"type": "shell",
 			"label": "Compilar Server",
-			"command": "g++ -o ${fileBasenameNoExtension}.exe ${relativeFile} -lSDL2main -lSDL2",
+			"command": "g++ -o ${fileBasenameNoExtension}.exe ${relativeFile} -lpthread",
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},

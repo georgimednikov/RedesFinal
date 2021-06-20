@@ -9,7 +9,7 @@ typedef int card;
 
 const std::string DECK_SOURCE = "./Cards.png";
 
-const int NUM_PLAYERS = 2;
+const int NUM_PLAYERS = 4;
 
 const int NUM_CARDS = 52; //Numero de cartas en el mazo
 const int NUM_CARDS_RANK = 13; //Numero de cartas por palo

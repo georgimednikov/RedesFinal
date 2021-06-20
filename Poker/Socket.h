@@ -11,6 +11,7 @@
 #include <ostream>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "Serializable.h"
 
@@ -180,7 +181,7 @@ public:
             std::cerr << strerror(errno) << '\n';
             return -1;
         }
-        sleep(1);
+        usleep(250);
         return 0;
     }
 
@@ -203,12 +204,20 @@ public:
 
     int listen()
     {
-        return ::listen(sd, 0);
+        int t =::listen(sd, 0);
+                
+        if(t < 0)
+            std::cerr << strerror(errno) << '\n';
+        return t;
     }
 
     int close()
     {
-        return ::close(sd);
+        int t = ::close(sd);
+        
+        if(t < 0)
+            std::cerr << strerror(errno) << '\n';
+        return t;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Socket& dt)
