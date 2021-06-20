@@ -308,7 +308,7 @@ private:
             int xPos = ax;// + (CARD_WIDTH + CARD_OFFSET * 2) * ( cos(angle));
             int yPos = ay;// + (CARD_WIDTH + CARD_OFFSET * 2) * (-sin(angle));
 
-            text = new Texture(renderer, "Discards: " + std::to_string(discarded[0]), font);
+            text = new Texture(renderer, "Discards: " + std::to_string(discarded[i]), font);
             switch (i)
             {
             case 0:
