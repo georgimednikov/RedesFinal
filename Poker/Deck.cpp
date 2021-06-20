@@ -5,11 +5,11 @@
 
 // card / NUM_CARDS_RANK = Palo
 // card % NUM_CARDS_RANK = Valor
-typedef uint8_t card;
+typedef int card;
 
 const std::string DECK_SOURCE = "./Cards.png";
 
-const int NUM_PLAYERS = 4;
+const int NUM_PLAYERS = 2;
 
 const int NUM_CARDS = 52; //Numero de cartas en el mazo
 const int NUM_CARDS_RANK = 13; //Numero de cartas por palo
@@ -62,11 +62,16 @@ public:
         return (a / NUM_CARDS_RANK == b / NUM_CARDS_RANK );
     }
 
-    //Devuelve el valor de la carta más alta
+    //Devuelve el valor de la carta mï¿½s alta
     static int HighestCard(card a, card b)
     {
         if(a % NUM_CARDS_RANK >= b % NUM_CARDS_RANK) return a;
         else return b;
+    }
+
+    static bool HighestCardCmp(card a, card b)
+    {
+        return (a % NUM_CARDS_RANK >= b % NUM_CARDS_RANK);
     }
 
     //Encuentra las coordenadas de una carta en la imagen fuente

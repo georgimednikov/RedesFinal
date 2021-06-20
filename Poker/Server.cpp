@@ -44,8 +44,7 @@ public:
             while (clients.size() == NUM_PLAYERS) {
                 game();
             }
-            Message m = Message("Server", Message::LOGOUT);
-            sendPlayers(m);
+            std::cout << "Se sale de game\n";
         }
         delete s;
     }
@@ -63,7 +62,6 @@ private:
     void game() {
         deck = new Deck();
         Message m;
-        Socket* s;
 
         std::cout << "Se reparten 2 cartas a cada jugador\n";
         for (int i = 0; i < clients.size(); i++) {
@@ -83,12 +81,11 @@ private:
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m, s)) {
-                    delete s;
-                    delete deck;
+                if (checkLogout(m)) {
+                    closeGame();
                     return;
                 }
-            } while (s != clients[i].first.get() && m.type != Message::DISCARD);
+            } while (m.type != Message::DISCARD);
 
             //Se mira cuantos inputs tiene la instruccion
             int count = 0;
@@ -108,20 +105,6 @@ private:
             sendPlayers(m);
         }
 
-        /*std::cout << "Se mira quien se retira\n";
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            do {
-                socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m, s)) {
-                    delete s;
-                    delete deck;
-                    return;
-                }
-            }
-            while (s != clients[i].first.get() && m.type != Message::PASS && m.type != Message::BET);
-            sendPlayers(m);
-        }*/
-
         std::cout << "Se pone otra carta en la mesa\n";
         m = Message("Server", Message::CARD_TABLE, deck->draw());
         cardsTable.push_back(m.message1);
@@ -131,13 +114,12 @@ private:
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m, s)) {
-                    delete s;
-                    delete deck;
+                if (checkLogout(m)) {
+                    closeGame();
                     return;
                 }
             }
-            while (s != clients[i].first.get() && m.type != Message::DISCARD);
+            while (m.type != Message::DISCARD);
 
             //Se mira cuantos inputs tiene la instruccion
             int count = 0; 
@@ -157,32 +139,20 @@ private:
             sendPlayers(m);
         }
 
-
-        /*std::cout << "Se mira quien se retira\n";
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            do {
-                socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m, s))  {
-                    delete s;
-                    delete deck;
-                    return;
-                }
-            }
-            while (s != clients[i].first.get() && m.type != Message::PASS && m.type != Message::BET);
-            sendPlayers(m);
-        }*/
-
         std::cout << "Se muestran las cartas\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
             m = Message(clients[i].second, Message::CARDS, hands[i][0], hands[i][1]);
             sendPlayers(m);
         }
-
         std::cout << "Se comprueba quien gana\n";
         int winner = checkWinner();
         if (winner >= 0) m = Message(clients[winner].second, Message::WINNER);
         else m = Message("Server", Message::WINNER);
         sendPlayers(m);
+        std::cout << m.nick << " " << (int)m.type << " " << (int)m.message1 << " " << (int)m.message2 << std::endl;
+
+        //5 segundos entre ronda y ronda
+        sleep(5);
 
         std::cout << "Se resetea el juego\n";
         m = Message("Server", Message::END_ROUND);
@@ -190,15 +160,19 @@ private:
         cardsTable.clear();
     }
 
+    void closeGame() {
+        if (deck != nullptr) delete deck;
+        cardsTable.clear();
+    }
+
     //Manda un mensaje a todos los jugadores conectados
     void sendPlayers(Message& m) {
         for (int j = 0; j < clients.size(); j++) {
-            std::cout << "Manda a " << clients[j].second << " el mensaje: " << m.nick << " " << (int)m.type << " " << (int)m.message1 << " " << (int)m.message2 << "\n";
             socket.send(m, *clients[j].first.get());
         }
     }
 
-    //Se mira si hay un mensaje LOGIN y si lo hay se añade la nuevo cliente a la lista
+    //Se mira si hay un mensaje LOGIN y si lo hay se aï¿½ade la nuevo cliente a la lista
     bool checkLogin(Message& m, Socket* s) {
         if (m.type != Message::LOGIN) return false;
         clients.push_back(std::pair<std::unique_ptr<Socket>, std::string>(std::move(std::make_unique<Socket>(*s)), m.nick));
@@ -207,16 +181,18 @@ private:
     }
 
     //Se mira si hay un mensaje LOGOUT y si lo hay se desconecta al jugador y se avisa al resto de clientes
-    bool checkLogout(Message& m, Socket* s) {
+    bool checkLogout(Message& m) {
         if (m.type != Message::LOGOUT) return false;
         auto it = clients.begin();
-        while (it != clients.end() && !(*(it->first.get()) == *s)) it++;
+        while (it != clients.end() && !((it->second) == m.nick)) it++;
         if(it != clients.end()) {
             std::cout << "Desconectado a: " << m.nick << std::endl;
             clients.erase(it);
-            it->first.release();
+            //it->first.release();
+            Message msg("Server", Message::LOGOUT);
+            sendPlayers(msg);
         }
-        else std::cout << "No encuentra" << std::endl;
+        else {std::cout << "No encontrado a: " << m.nick << std::endl; return false;}
         return true;
     }
 
@@ -227,19 +203,35 @@ private:
         Hands highest_hand[NUM_PLAYERS];
         bool found = false;
 
-        //Se guarda la mejor combinación de cada jugador
+        //Se guarda la mejor combinaciï¿½n de cada jugador
         for (int i = 0; i < NUM_PLAYERS; i++) {
             std::vector<int> playerHand;
             for(int j = 0; j < 5; j++) {
                 if(j < 2) playerHand.push_back(hands[i][j]); 
                 else playerHand.push_back(cardsTable[j - 2]);
             }
-            std::sort(playerHand.begin(), playerHand.end(), Deck::HighestCard);
+
+            for (size_t i = 0; i < 5; i++)
+            {
+                std::cout << playerHand[i] << " ";
+            }
+            std::cout << std::endl;
+
+            std::sort(playerHand.begin(), playerHand.end(), Deck::HighestCardCmp);
+
+            for (size_t i = 0; i < 5; i++)
+            {
+                std::cout << playerHand[i] <<" ";
+            }
+            std::cout << std::endl;
+            
+
             checkFlush(playerHand, highest_hand[i], highest_card[i]);
             checkPairs(playerHand, highest_hand[i], highest_card[i]);
+            std::cout << i << " " << highest_hand[i] << " " << highest_card[i] << std::endl;
         }
 
-        //Se comparan manos. En caso de empate se miran las siguientes combinaciones más valiosas
+        //Se comparan manos. En caso de empate se miran las siguientes combinaciones mï¿½s valiosas
         for (size_t i = 1; i < NUM_PLAYERS; i++) {
             if(highest_hand[i] > highest_hand[winner]) winner = i;
             else if(highest_hand[i] == highest_hand[winner] && highest_card[i] > highest_card[winner]) winner = i;
@@ -260,8 +252,8 @@ private:
         return winner;
     }
 
-    //Mira la mejor combinación en base a palos y números
-    void checkFlush(std::vector<int> playerHand, Hands hand, int card) {
+    //Mira la mejor combinaciï¿½n en base a palos y nï¿½meros
+    void checkFlush(std::vector<int> playerHand, Hands &hand, int &card) {
         bool flush = true, straight = true;
         for (int i = 1; i < playerHand.size() && (flush || straight); i++) {
             flush = Deck::SameSuit(playerHand[i - 1], playerHand[i]);
@@ -276,13 +268,13 @@ private:
         card = playerHand[playerHand.size() - 1] % NUM_CARDS_RANK ;
     }
 
-    //Mira la mejor combinación de una mano basada en la repetición de cartas
-    void checkPairs(std::vector<int> playerHand, Hands hand, int card) {
+    //Mira la mejor combinaciï¿½n de una mano basada en la repeticiï¿½n de cartas
+    void checkPairs(std::vector<int> playerHand, Hands &hand, int &card) {
         if (hand > Hands::Full_House) return;
         int cont = 1;
         bool pair = false,  double_pair = false, threesome = false, foursome = false;
-        for (int i = 1; i < playerHand.size(); i++) {
-            if (playerHand[i - 1] % NUM_CARDS_RANK == playerHand[i] % NUM_CARDS_RANK)
+        for (int i = 1; i < playerHand.size() + 1; i++) {
+            if (i < playerHand.size() && playerHand[i - 1] % NUM_CARDS_RANK == playerHand[i] % NUM_CARDS_RANK)
                 cont++;
             else {
                 switch (cont)
@@ -300,8 +292,10 @@ private:
                     card = playerHand[i - 1] % NUM_CARDS_RANK;
                     return;
                 }
-                card = playerHand[i - 1] % NUM_CARDS_RANK;
-                cont = 1;
+                if (cont > 1) {
+                    card = playerHand[i - 1] % NUM_CARDS_RANK;
+                    cont = 1;
+                }
             }
         }
 

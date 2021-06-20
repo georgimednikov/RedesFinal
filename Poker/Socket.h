@@ -206,10 +206,10 @@ public:
         return ::listen(sd, 0);
     }
 
-    /*int close()
+    int close()
     {
         return ::close(sd);
-    }*/
+    }
 
     friend std::ostream& operator<<(std::ostream& os, const Socket& dt)
     {

@@ -30,10 +30,11 @@ public:
     Player(const char * s, const char * p, char * n)  {
         socket = Socket(s, p, false);
         nicks[0] = n;
+        state = UNSTARTED;
         resetGame();
     };
 
-    ~Player() { closeRender(); };
+    ~Player() {};
 
     //Informa al servidor de que se ha unido
     void login() {
@@ -62,9 +63,13 @@ public:
 
             Message em = Message();
             em.nick = nicks[0];
-            if (inst == "LOGOUT") em.type = Message::LOGOUT;
-            //else if (inst == "PASS") em.type = Message::PASS;
-            //else if (inst == "BET") em.type = Message::BET;
+            if (inst == "l")
+            {
+                em.type = Message::LOGOUT;
+                socket.send(em, socket);
+                socket.close();
+                return;
+            } 
             else if (inst == "DISCARD") {
                 //Si se descarta hay que ver cuantas cartas se descartan y cuales para decirselo al servidor
                 //DISCARD -> 0 descartes; DISCARD 1 -> Se descarta la de la izquierda
@@ -90,12 +95,14 @@ public:
 
     //Hilo que renderiza el estado del juego
     void render_thread() {
-        while(true)
-            //Solo renderiza cuando se está jugando
-            if (state != UNSTARTED) {
-                initRender();
-                while (state != UNSTARTED) render();
-            }
+        initRender();
+        while (state != UNSTARTED) render();
+        if (texture != nullptr) delete texture;
+        if (texture != nullptr) delete font;
+        if (renderer != nullptr) SDL_DestroyRenderer(renderer);
+        if (window != nullptr) SDL_DestroyWindow(window);
+        TTF_Quit();
+        SDL_Quit();
     }
 
     //Hilo que recibe y procesa los mensajes del servidor
@@ -115,8 +122,9 @@ public:
                     usedNicks++;
                     //Cuando están todos comienza la partida.
                     if (usedNicks == NUM_PLAYERS) {
-                        sortNicks();
                         state = PLAYING;
+                        Player* p = this;
+                        std::thread render_thr([p](){ p->render_thread(); }); render_thr.detach();
                     }
                     break;
                 }
@@ -146,28 +154,26 @@ public:
                     cardNum++;
                     break;
                 }
-                /*case Message::PASS:
-                {                
-                    int pos = searchNick(msg.nick);
-                    if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
-                    for (int i = 0; i < 2; i++) hands[pos][i] = -1;
-                    break;
-                }*/
                 case Message::END_ROUND:
                 {    
                     resetState();
+                    std::cout << "Siguiente ronda\n";
                     break;
                 }
                 case Message::LOGOUT:
                 {
                     resetGame();
+                    std::cout << "Se acabó la partida\n";
                     break;
                 }
                 case Message::WINNER:
                 {
-                    if (msg.nick == "Server") state = DRAW;
-                    if (msg.nick == nicks[0]) state = WIN;
-                    else state = LOSE;
+                    if (msg.nick == "Server") break;
+                    else {
+                        int pos = searchNick(msg.nick);
+                        if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
+                        wins[pos]++;
+                    }
                 }
             }
         }
@@ -177,10 +183,7 @@ public:
 private:
     enum State {
         UNSTARTED, //No ha empezado la partida / Se esperan jugadores
-        PLAYING, //Se está jugando
-        LOSE, //Has perdido
-        WIN, //Has ganado
-        DRAW //Has empatado
+        PLAYING //Se está jugando
     };
 
     Socket socket;
@@ -194,6 +197,7 @@ private:
 
     int hands[NUM_PLAYERS][2]; // -1 significa que no se conoce la carta
     int discarded[NUM_PLAYERS]; //Cuantas cartas ha descartado cada jugador
+    int wins[NUM_PLAYERS]; //Cuantas veces ha ganado cada jugador
 
     SDL_Window* window;
     SDL_Renderer* renderer;
@@ -208,22 +212,13 @@ private:
         return -1;
     }
 
-    //Ordena los nicks en base al orden de turnos
-    void sortNicks() {
-        std::string temp[NUM_PLAYERS];
-        std::copy(nicks, nicks + NUM_PLAYERS, temp);
-        int pos = searchNick(nicks[0]);
-        for (int i = 0; i < NUM_PLAYERS; pos = ++pos % NUM_PLAYERS, cont++)
-            nicks[i] = temp[pos];
-    }
-
     //Se acaba la partida; se resetea todo el juego
     void resetGame() {
         resetState();
         usedNicks = 1;
         cardNum = 0;
+        for (int i = 0; i < NUM_PLAYERS; i++) wins[i] = 0;
         state = UNSTARTED;
-        closeRender();
     }
 
     //Se acaba la ronda; se resetea el estado del juego
@@ -251,19 +246,7 @@ private:
         
         TTF_Init();
         texture = new Texture(renderer, DECK_SOURCE);
-        font = new Font(FONT_SOURCE, 30);
-    }
-
-    //Destruye SDL si se ha llegado a inicializar
-    void closeRender() {
-        if (state != UNSTARTED) {
-            delete texture; 
-            delete font;
-            SDL_DestroyRenderer(renderer);
-            SDL_DestroyWindow(window);
-            TTF_Quit();
-            SDL_Quit();
-        }
+        font = new Font(FONT_SOURCE, 25);
     }
 
     //Se renderiza el estado del juego
@@ -298,8 +281,9 @@ private:
             }
 
             //Se colocan los textos de cada jugador
-            int xPos = ax;// + (CARD_WIDTH + CARD_OFFSET * 2) * ( cos(angle));
-            int yPos = ay;// + (CARD_WIDTH + CARD_OFFSET * 2) * (-sin(angle));
+            //Esto habría que hacer que dependiera del numero de jugadores
+            int xPos = ax;
+            int yPos = ay;
 
             text = new Texture(renderer, "Discards: " + std::to_string(discarded[i]), font);
             switch (i)
@@ -318,8 +302,13 @@ private:
                 break;
             }
             text->render(xPos, yPos);
-            text = new Texture(renderer, nicks[i], font);
+            delete text;
+            text = new Texture(renderer, "Wins: " + std::to_string(wins[i]), font);
             text->render(xPos, yPos - text->height_);
+            delete text;
+            text = new Texture(renderer, nicks[i], font);
+            text->render(xPos, yPos - (text->height_ * 2));
+            delete text;
         }
 
         //Cartas sobre la mesa
@@ -330,16 +319,13 @@ private:
             Deck::getCardCoor(cardsTable[j], source.x, source.y, source.w, source.h); 
             texture->render(dest, source);
         }
-
-        delete text;
         SDL_RenderPresent(renderer); //Se dibuja el nuevo frame
     }
 };
 
 int main(int argc, char **argv) {
     Player ec(argv[1], argv[2], argv[3]);
-    std::thread net_thread([&ec](){ ec.net_thread(); });
-    std::thread render_thread([&ec](){ ec.render_thread(); });
+    std::thread net_thread([&ec](){ ec.net_thread(); }); net_thread.detach();
     ec.login();
     ec.input_thread();
 }

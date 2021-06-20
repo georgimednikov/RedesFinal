@@ -13,8 +13,6 @@ public:
     enum MessageType
     {
         LOGIN, //Se conecta un jugador. Usa Nick
-        //PASS, //Se pasa la ronda 
-        //BET, //Se apuesta una cantidad
         DISCARD, //Un jugador descarta cartas. Pueden ser 0, 1 para la de la izquierda, 2 para la derecha y 1 2 para ambas.
         LOGOUT, //Se desconecta un jugador
         CARDS, //Que cartas tiene un jugador
