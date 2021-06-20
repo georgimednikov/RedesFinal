@@ -2,7 +2,6 @@
 #include <SDL2/SDL_ttf.h>
 #include <iostream>
 #include <string>
-using namespace std;
 
 class Font {
 private:
@@ -10,10 +9,10 @@ private:
 
 public:
 	Font() : font_(nullptr) {};
-	Font(const string& fileName, int size) { load(fileName, size); };
+	Font(const std::string& fileName, int size) { load(fileName, size); };
 	virtual ~Font() { close(); };
 
-	void load(const string& fileName, int size) {
+	void load(const std::string& fileName, int size) {
 		font_ = TTF_OpenFont(fileName.c_str(), size);
 		if (font_ == nullptr) {
 			std::cout << "Font " << TTF_GetError() << "\n";
@@ -25,7 +24,7 @@ public:
 			font_ = nullptr;
 		}
 	}
-	SDL_Surface* renderText(const string& text, SDL_Color color) const {
+	SDL_Surface* renderText(const std::string& text, SDL_Color color) const {
 		if (font_) {
 			return TTF_RenderText_Solid(font_, text.c_str(), color);
 		}

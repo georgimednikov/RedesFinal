@@ -10,6 +10,7 @@
 
 #include <ostream>
 #include <string.h>
+#include <unistd.h>
 
 #include "Serializable.h"
 
@@ -177,6 +178,7 @@ public:
             std::cerr << strerror(errno) << '\n';
             return -1;
         }
+        sleep(1);
         return 0;
     }
 

@@ -8,7 +8,7 @@
 #include "Socket.h"
 #include "Message.cpp"
 
-const int NUM_PLAYERS = 2;
+const int NUM_PLAYERS = 4;
 
 /**
  *  Clase para el servidor de poker
@@ -17,6 +17,7 @@ class PokerServer
 {
 public:
     PokerServer(const char * s, const char * p): socket(s, p, true) {};
+    ~PokerServer() { delete deck; };
 
     /**
      *  Thread principal del servidor recive mensajes en el socket y
@@ -52,6 +53,7 @@ public:
             Message m = Message("Server", Message::LOGOUT);
             sendPlayers(m);
         }
+        delete s;
     }
 
 private:
@@ -86,42 +88,55 @@ private:
         Socket* s;
 
         char c;
+
         std::cout << "Se reparten 2 cartas a cada jugador\n";
         for (int i = 0; i < clients.size(); i++) {
             m = Message(clients[i].second, Message::CARDS, deck->draw(), deck->draw());
             socket.send(m, *clients[i].first.get());
+            hands[i][0] = m.message1, hands[i][1] = m.message2;
         }
 
         std::cout << "Se ponen 2 cartas en la mesa\n";
-        m = Message("Server", Message::CARD_TABLE, deck->draw(), deck->draw());
-        cardsTable.push_back(m.message1); cardsTable.push_back(m.message2);
-        sendPlayers(m);
-        std::cin >> c;
+        for (int i = 0; i < 2; i++) {
+            m = Message("Server", Message::CARD_TABLE, deck->draw());
+            cardsTable.push_back(m.message1);
+            sendPlayers(m);
+        }
 
         std::cout << "Se mira cuantas cartas cada jugador quiere descartar\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
-            std::cout << "Pre get\n";
             do {
-                socket.recv(m, *(clients[j].first.get()));
-                if (checkLogout(m, s)) return;
+                socket.recv(m, *(clients[i].first.get()));
+                if (checkLogout(m, s)) {
+                    delete s;
+                    return;
+                }
             }
             while (s != clients[i].first.get() && m.type != Message::DISCARD);
-            std::cout << "Post get\n";
 
-            int count = 0; if (m.message1 != 0) {
+            int count = 0; 
+            if (m.message1 != 0) {
                 count++;
                 if (m.message2 != 0) count++;
+            }
+            for (int j = 0; j < count; j++) {
+                int ind = ((j == 0) ? (int)m.message1: (int)m.message2) - 1;
+                Message msg("Server", Message::DISCARD, ind, deck->draw());
+                socket.send(msg, *clients[i].first.get());
+                hands[i][ind] = msg.message2;
             }
             m.type = Message::DISCARD_INFO; m.message1 = count;
             sendPlayers(m);
         }
-        std::cin >> c;
 
         std::cout << "Se mira quien se retira\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m, s)) return;
+                if (checkLogout(m, s)) {
+                    delete s;
+                    return;
+                }
             }
             while (s != clients[i].first.get() && m.type != Message::PASS && m.type != Message::BET);
             sendPlayers(m);
@@ -136,22 +151,37 @@ private:
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m, s)) return;
+                if (checkLogout(m, s)) {
+                    delete s;
+                    return;
+                }
             }
             while (s != clients[i].first.get() && m.type != Message::DISCARD);
-            int count = 0; if (m.message1 != -1) {
+
+            int count = 0; 
+            if (m.message1 != 0) {
                 count++;
-                if (m.message2 != -1) count++;
+                if (m.message2 != 0) count++;
+            }
+            for (int j = 0; j < count; j++) {
+                int ind = ((j == 0) ? (int)m.message1: (int)m.message2) - 1;
+                Message msg("Server", Message::DISCARD, ind, deck->draw());
+                socket.send(msg, *clients[i].first.get());
+                hands[i][ind] = msg.message2;
             }
             m.type = Message::DISCARD_INFO; m.message1 = count;
             sendPlayers(m);
         }
 
+
         std::cout << "Se mira quien se retira\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
             do {
                 socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m, s)) return;
+                if (checkLogout(m, s))  {
+                    delete s;
+                    return;
+                }
             }
             while (s != clients[i].first.get() && m.type != Message::PASS && m.type != Message::BET);
             sendPlayers(m);

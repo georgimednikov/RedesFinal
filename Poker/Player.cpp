@@ -1,4 +1,5 @@
 #include <thread>
+#include <vector>
 #include "Serializable.h"
 #include "Socket.h"
 #include "Message.cpp"
@@ -6,7 +7,7 @@
 #include "Font.cpp"
 #include "Deck.cpp"
 
-const int NUM_PLAYERS = 2;
+const int NUM_PLAYERS = 4;
 
 const int WIN_WIDTH = 1200;
 const int WIN_HEIGHT = 900;
@@ -30,6 +31,8 @@ public:
         nicks[0] = n;
         resetGame();
     };
+
+    ~Player() { closeRender(); };
 
     /**
      *  Envía el mensaje de login al servidor
@@ -93,6 +96,17 @@ public:
         }
     }
 
+    void render_thread()
+    {
+        while(true)
+        {
+            if (state != UNSTARTED) {
+                initRender();
+                while (state != UNSTARTED) render();
+            }
+        }
+    }
+
     /**
      *  Rutina del thread de Red. Recibe datos de la red y los "renderiza"
      *  en STDOUT
@@ -101,7 +115,7 @@ public:
     {
         while(true)
         {
-            //if (state == PLAYING) render();
+            //if (state != UNSTARTED) render();
             Message msg;
             socket.recv(msg, socket);
             std::cout << msg.nick << " " << (int)msg.type << " " << (int)msg.message1 << " " << (int)msg.message2 << std::endl;
@@ -114,8 +128,13 @@ public:
                     usedNicks++;
                     if (usedNicks == NUM_PLAYERS) {
                         state = PLAYING;
-                        //initRender();
                     }
+                    break;
+                }
+                case Message::DISCARD:
+                {                
+                    hands[0][msg.message1] = msg.message2;
+                    std::cout << "Nueva mano: " << hands[0][0] << " " << hands[0][1] << "\n";
                     break;
                 }
                 case Message::DISCARD_INFO:
@@ -129,14 +148,13 @@ public:
                 {
                     int pos = searchNick(msg.nick);
                     if (pos == -1) std::cerr << "Invalid Nick: " << msg.nick << "\n";
-                    for (int i = 0; i < msg.message1; i++) hands[pos][i] = true;
+                    hands[pos][0] = msg.message1, hands[pos][1] = msg.message2;
                     break;
                 }
                 case Message::CARD_TABLE:
                 {    
-                    cardsTable.push_back(msg.message1);
-                    cardsTable.push_back(msg.message2);
-                    std::cout << "No crashea\n";
+                    cardsTable[cardNum] = msg.message1;
+                    cardNum++;
                     break;
                 }
                 case Message::PASS:
@@ -206,7 +224,8 @@ private:
     /**
      * Cartas en la mesa
      */
-    std::vector<int> cardsTable;
+    int cardsTable[3];
+    int cardNum = 0;
 
     int searchNick(std::string nc) {
         for (int i = 0; i < NUM_PLAYERS; ++i) {
@@ -219,6 +238,8 @@ private:
         resetState();
         usedNicks = 1;
         state = UNSTARTED;
+        cardNum = 0;
+        closeRender();
     }
 
     void resetState() {
@@ -228,7 +249,9 @@ private:
             }
             discarded[i] = 0;
         }
-        cardsTable.clear();
+        for (int i = 0; i < 3; i++)
+            cardsTable[i] = 0;
+        cardNum = 0;
         state = PLAYING;
     }
 
@@ -243,6 +266,16 @@ private:
         TTF_Init();
         texture = new Texture(renderer, DECK_SOURCE);
         font = new Font(FONT_SOURCE, 30);
+    }
+
+    void closeRender() {
+        if (state != UNSTARTED) {
+            delete texture; 
+            delete font;
+            SDL_DestroyRenderer(renderer);
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+        }
     }
 
     void render() {
@@ -292,18 +325,19 @@ private:
                 break;
             }
             text->render(xPos, yPos);
-            text = new Texture(renderer, nicks[0], font);
+            text = new Texture(renderer, nicks[i], font);
             text->render(xPos, yPos - text->height_);
         }
 
-        int ax = WIN_WIDTH / 2 - (CARD_WIDTH + CARD_OFFSET) *  (cardsTable.size() / 2.0);
+        int ax = WIN_WIDTH / 2 - (CARD_WIDTH + CARD_OFFSET) *  (cardNum / 2.0);
         dest.y = WIN_HEIGHT / 2 - CARD_HEIGHT / 2, dest.w = CARD_WIDTH, dest.h = CARD_HEIGHT;
-        for (int j = 0; j < cardsTable.size(); j++) {
+        for (int j = 0; j < cardNum; j++) {
             dest.x = ax + (CARD_WIDTH + CARD_OFFSET * 2) * j;
             Deck::getCardCoor(cardsTable[j], source.x, source.y, source.w, source.h); 
             texture->render(dest, source);
         }
 
+        delete text;
         SDL_RenderPresent(renderer); //Draw
     }
 
@@ -318,6 +352,7 @@ int main(int argc, char **argv)
 {
     Player ec(argv[1], argv[2], argv[3]);
     std::thread net_thread([&ec](){ ec.net_thread(); });
+    std::thread render_thread([&ec](){ ec.render_thread(); });
     ec.login();
     ec.input_thread();
 }

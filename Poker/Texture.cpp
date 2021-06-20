@@ -1,7 +1,6 @@
 #include <SDL2/SDL_image.h>
 #include <iostream>
 #include "Font.cpp"
-using namespace std;
 
 class Texture {
 private:
@@ -13,13 +12,13 @@ public:
 
 public:
 	Texture() : texture_(nullptr), renderer_(nullptr) {}
-	Texture(SDL_Renderer* renderer, const string& fileName) : texture_(nullptr) { loadFromImg(renderer, fileName); }
-	Texture(SDL_Renderer* renderer, const string& text, const Font* font, const SDL_Color& color = { 255, 255, 255, 255 }) : texture_(nullptr) { loadFromText(renderer, text, font, color); }
+	Texture(SDL_Renderer* renderer, const std::string& fileName) : texture_(nullptr) { loadFromImg(renderer, fileName); }
+	Texture(SDL_Renderer* renderer, const std::string& text, const Font* font, const SDL_Color& color = { 255, 255, 255, 255 }) : texture_(nullptr) { loadFromText(renderer, text, font, color); }
 
 	~Texture() { close(); }
 
 	// Carga las texturas a partir de una imagen
-	bool loadFromImg(SDL_Renderer* renderer, const string& fileName) {
+	bool loadFromImg(SDL_Renderer* renderer, const std::string& fileName) {
 		SDL_Surface* surface = IMG_Load(fileName.c_str());
 		if (surface != nullptr) {
 			close(); // destruye la textura actual para sustituirla
@@ -34,7 +33,7 @@ public:
 	}
 
 	//Carga las texturas a partir de un texto con una fuente
-	bool loadFromText(SDL_Renderer* renderer, const string& text, const Font* font, const SDL_Color& color) {
+	bool loadFromText(SDL_Renderer* renderer, const std::string& text, const Font* font, const SDL_Color& color) {
 		SDL_Surface* textSurface = font->renderText(text, color);
 		if (textSurface != nullptr) {
 			close();
