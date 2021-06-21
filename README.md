@@ -7,9 +7,11 @@ Por:
 La memoria la entregó Daniel.
 
 Los inputs se llevan por consola. Los posibles insputs del jugador son:
-	LOGOUT: Lo desconecta del servidor y lo saca del juego.
-	DISCARD/DISCARD 0: Se elige no descartar cartas.
-	DISCARD 1/DISCARD 2: Se elige descartar la carta de la izquierda/derecha.
-	DISCARD 1 2: Se elige descartar ambas cartas.
+- LOGOUT: Lo desconecta del servidor y lo saca del juego.
+- DISCARD/DISCARD 0: Se elige no descartar cartas.
+- DISCARD 1/DISCARD 2: Se elige descartar la carta de la izquierda/derecha.
+- DISCARD 1 2: Se elige descartar ambas cartas.
 
 ESTÁ DISEÑADO PARA 4 JUGADORES
+
+Existen dos implementaciones, una en la que el servidor solo tiene un hilo (main) y otra en la que tiene el principal más uno por cliente (Prueba_Threads).
