@@ -181,7 +181,7 @@ public:
             std::cerr << strerror(errno) << '\n';
             return -1;
         }
-        usleep(250);
+        usleep(200);
         return 0;
     }
 
