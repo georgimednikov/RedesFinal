@@ -21,10 +21,10 @@ public:
         while (true) {
             std::cout << "Número de clientes: " << clients.size() << std::endl;
             s = socket.accept();
-            PokerServer* server = this;
-
             socket.recv(msg, *s);
-            checkLogin(msg, s);
+            int ind = checkLogin(msg, s);
+            PokerServer* server = this;
+            std::thread input_thr([server, s, ind](){ server->input_thread(server, s, ind); }); input_thr.detach();
 
             //Si no se tienen suficientes jugadores se sigue esperando conexiones
             if (clients.size() < NUM_PLAYERS) continue;
@@ -44,12 +44,46 @@ public:
         delete s;
     }
 
+    void input_thread(PokerServer* server, Socket* s, int ind) { //Tiene que ser otro puntero?
+        while(true) {
+            socket.recv(msg, *s);
+            if (checkLogout(msg, s)) {
+                server->closeGame();
+                return;
+            }
+            //Solo se lee input del jugador que tiene el turno
+            //Esto procesaria todos los mensajes del juego, pero en este caso solo hay uno
+            if (turn != ind) continue;
+            if (msg.type == Message::DISCARD) {
+                //Se mira cuantos inputs tiene la instruccion
+                int count = 0;
+                if (m.message1 != 0) {
+                    count++;
+                    if (m.message2 != 0) count++;
+                }
+                //Se envian mensajes con las nuevas cartas y las que han sustituido
+                for (int j = 0; j < count; j++) {
+                    int ind = ((j == 0) ? (int)m.message1 : (int)m.message2) - 1;
+                    Message msg("Server", Message::DISCARD, ind, deck->draw());
+                    socket.send(msg, *clients[i].first.get());
+                    hands[i][ind] = msg.message2;
+                }
+                //Se avisa a los jugadores de cuantas cartas ha descartado este cliente
+                m.type = Message::DISCARD_INFO; m.message1 = count;
+                sendPlayers(m);
+                turn++;
+            }
+            //...
+        }
+    }
+
 private:
     //Posibles manos en el poker
     enum Hands {High_Card, Pair, Two_Pair, Three_of_a_kind, Straight, Flush, Full_House, Four_of_a_kind, Straight_Flush, Royal_Flush};
 
     Socket socket;
     Deck* deck; //Baraja para la partida
+    int turn; //De quien es el turno para leer input
     int hands[NUM_PLAYERS][2]; //Manos de cada jugador
     std::vector<int> cardsTable; //Cartas en la mesa
     std::vector<std::pair<std::unique_ptr<Socket>, std::string>> clients; //Lista de clientes con su socket y su nick
@@ -73,32 +107,8 @@ private:
         }
 
         std::cout << "Se mira cuantas cartas cada jugador quiere descartar\n";
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            do {
-                socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m)) {
-                    closeGame();
-                    return;
-                }
-            } while (m.type != Message::DISCARD);
-
-            //Se mira cuantos inputs tiene la instruccion
-            int count = 0;
-            if (m.message1 != 0) {
-                count++;
-                if (m.message2 != 0) count++;
-            }
-            //Se envian mensajes con las nuevas cartas y las que han sustituido
-            for (int j = 0; j < count; j++) {
-                int ind = ((j == 0) ? (int)m.message1 : (int)m.message2) - 1;
-                Message msg("Server", Message::DISCARD, ind, deck->draw());
-                socket.send(msg, *clients[i].first.get());
-                hands[i][ind] = msg.message2;
-            }
-            //Se avisa a los jugadores de cuantas cartas ha descartado este cliente
-            m.type = Message::DISCARD_INFO; m.message1 = count;
-            sendPlayers(m);
-        }
+        turn = 0;
+        while (turn < NUM_PLAYERS);
 
         std::cout << "Se pone otra carta en la mesa\n";
         m = Message("Server", Message::CARD_TABLE, deck->draw());
@@ -106,33 +116,8 @@ private:
         sendPlayers(m);
 
         std::cout << "Se mira cuantas cartas cada jugador quiere descartar\n";
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            do {
-                socket.recv(m, *(clients[i].first.get()));
-                if (checkLogout(m)) {
-                    closeGame();
-                    return;
-                }
-            }
-            while (m.type != Message::DISCARD);
-
-            //Se mira cuantos inputs tiene la instruccion
-            int count = 0; 
-            if (m.message1 != 0) {
-                count++;
-                if (m.message2 != 0) count++;
-            }
-            //Se envian mensajes con las nuevas cartas y las que han sustituido
-            for (int j = 0; j < count; j++) {
-                int ind = ((j == 0) ? (int)m.message1: (int)m.message2) - 1;
-                Message msg("Server", Message::DISCARD, ind, deck->draw());
-                socket.send(msg, *clients[i].first.get());
-                hands[i][ind] = msg.message2;
-            }
-            //Se avisa a los jugadores de cuantas cartas ha descartado este cliente
-            m.type = Message::DISCARD_INFO; m.message1 = count;
-            sendPlayers(m);
-        }
+        turn = 0;
+        while (turn < NUM_PLAYERS);
 
         std::cout << "Se muestran las cartas\n";
         for (int i = 0; i < NUM_PLAYERS; i++) {
@@ -168,11 +153,11 @@ private:
     }
 
     //Se mira si hay un mensaje LOGIN y si lo hay se a�ade la nuevo cliente a la lista
-    bool checkLogin(Message& m, Socket* s) {
+    int checkLogin(Message& m, Socket* s) {
         if (m.type != Message::LOGIN) return false;
         clients.push_back(std::pair<std::unique_ptr<Socket>, std::string>(std::move(std::make_unique<Socket>(*s)), m.nick));
         std::cout << "Conectado: " << m.nick << std::endl;
-        return true;
+        return clients.size() - 1;
     }
 
     //Se mira si hay un mensaje LOGOUT y si lo hay se desconecta al jugador y se avisa al resto de clientes
