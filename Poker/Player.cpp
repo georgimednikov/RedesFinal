@@ -125,7 +125,7 @@ public:
                         state = PLAYING;
                         std::cout << "Empieza la partida\n";
                         Player* p = this;
-                        //std::thread render_thr([p](){ p->render_thread(); }); render_thr.detach();
+                        std::thread render_thr([p](){ p->render_thread(); }); render_thr.detach();
                     }
                     break;
                 }
@@ -325,7 +325,7 @@ private:
 };
 
 int main(int argc, char **argv) {
-    if (argc != 4 || argv[1] == "Server" || strlen(argv[1]) > 8) return -1;
+    if (argc != 4 || argv[3] == "Server" || strlen(argv[3]) > 8) return -1;
     Player ec(argv[1], argv[2], argv[3]);
     std::thread net_thread([&ec](){ ec.net_thread(); }); net_thread.detach();
     ec.login();
